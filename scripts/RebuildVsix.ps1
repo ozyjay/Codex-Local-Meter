@@ -13,6 +13,37 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 Push-Location $repoRoot
 
+function Build-IconFont {
+    $iconSource = Join-Path $repoRoot 'images/icon-mono.svg'
+    $iconFont = Join-Path $repoRoot 'images/codex-local-meter.woff'
+    $generatedRoot = Join-Path $repoRoot 'out/icon-font'
+    $generatedSource = Join-Path $generatedRoot 'src'
+    $generatedOutput = Join-Path $generatedRoot 'out'
+
+    if (-not (Test-Path -LiteralPath $iconSource)) {
+        throw "Icon source not found: $iconSource"
+    }
+
+    if (Test-Path -LiteralPath $generatedRoot) {
+        Remove-Item -Recurse -Force -LiteralPath $generatedRoot
+    }
+
+    New-Item -ItemType Directory -Force -Path $generatedSource, $generatedOutput | Out-Null
+    Copy-Item -LiteralPath $iconSource -Destination (Join-Path $generatedSource 'codex-local-meter.svg')
+
+    npx svgtofont -s $generatedSource -o $generatedOutput -f codex-local-meter
+    if ($LASTEXITCODE -ne 0) {
+        throw "Icon font generation failed with exit code $LASTEXITCODE."
+    }
+
+    $generatedIconFont = Join-Path $generatedOutput 'codex-local-meter.woff'
+    if (-not (Test-Path -LiteralPath $generatedIconFont)) {
+        throw "Icon font generation completed but no WOFF was found: $generatedIconFont"
+    }
+
+    Copy-Item -LiteralPath $generatedIconFont -Destination $iconFont -Force
+}
+
 try {
     Write-Host 'Codex Local Meter VSIX rebuild'
     Write-Host "Repository: $repoRoot"
@@ -29,6 +60,10 @@ try {
         npm version $VersionBump --no-git-tag-version
         Write-Host ''
     }
+
+    Write-Host 'Rebuilding icon font...'
+    Build-IconFont
+    Write-Host ''
 
     Write-Host 'Compiling TypeScript...'
     npm run compile

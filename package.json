@@ -2,7 +2,7 @@
   "name": "codex-local-meter",
   "displayName": "Codex Local Meter",
   "description": "Local-only Codex usage estimates in the VS Code status bar from your local ~/.codex session files.",
-  "version": "0.1.7",
+  "version": "0.1.11",
   "publisher": "codex-local-meter",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -114,7 +114,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "unit-test": "mocha out/test/suite/usageCalculator.test.js out/test/suite/codexReader.test.js out/test/suite/statusBarText.test.js --timeout 10000 --ui tdd",
+    "unit-test": "mocha out/test/suite/usageCalculator.test.js out/test/suite/codexReader.test.js out/test/suite/statusBarText.test.js out/test/suite/runTests.test.js --timeout 10000 --ui tdd",
     "test": "node ./out/test/runTests.js",
     "lint": "eslint src --ext ts",
     "package:vsix": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1",
@@ -131,7 +131,13 @@
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^3.9.1",
     "eslint": "^8.56.0",
-    "mocha": "^10.3.0",
+    "mocha": "^11.3.0",
+    "svgtofont": "^6.5.2",
     "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "mocha": {
+      "serialize-javascript": "7.0.5"
+    }
   }
 }

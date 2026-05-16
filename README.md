@@ -106,35 +106,54 @@ Install dependencies:
 npm install
 ```
 
-Compile:
+Common npm scripts:
+
+| Script | What it does | When to use it |
+| --- | --- | --- |
+| `npm run compile` | Runs `tsc -p ./` and writes compiled output to `out/`. | After TypeScript changes and before packaging. |
+| `npm run watch` | Runs the TypeScript compiler in watch mode. | While actively editing TypeScript. |
+| `npm run lint` | Runs ESLint over `src/**/*.ts`. | After source changes, before release packaging. |
+| `npm run unit-test` | Runs the compiled Mocha unit tests for parser, calculator, and status text logic. | For logic-only changes. Run `npm run compile` first if `out/` is stale. |
+| `npm test` | Compiles first, then runs the VS Code extension test runner. | When activation, commands, or VS Code APIs are touched. |
+| `npm run vscode:prepublish` | Compiles the extension. | Used by VS Code packaging workflows. |
+
+Examples:
 
 ```powershell
 npm run compile
-```
-
-Lint:
-
-```powershell
 npm run lint
-```
-
-Run logic-focused tests:
-
-```powershell
 npm run unit-test
-```
-
-Run the VS Code extension test runner:
-
-```powershell
 npm test
 ```
 
-Package locally with `vsce` directly:
+Package locally:
 
 ```powershell
-npx vsce package
+npm run package:vsix
 ```
+
+`package:vsix` calls `scripts/RebuildVsix.ps1`, which compiles, lints, runs unit tests, and then runs `npx vsce package`.
+
+Version-bump packaging scripts:
+
+| Script | Use when |
+| --- | --- |
+| `npm run package:patch` | Fixes or small internal changes, for example `0.1.1` -> `0.1.2`. |
+| `npm run package:minor` | New backward-compatible features, for example `0.1.1` -> `0.2.0`. |
+| `npm run package:major` | Breaking changes, for example `0.1.1` -> `1.0.0`. |
+
+These scripts update `package.json` and `package-lock.json` with `npm version <patch|minor|major> --no-git-tag-version`, then run the same compile, lint, unit-test, and package flow.
+
+You can also call the packaging script directly when you need options:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -Install
+powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -SkipLint
+powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -SkipUnitTests
+powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch
+```
+
+Use the skip flags only for local iteration. Release packages should run lint and unit tests.
 
 ## Project Layout
 
@@ -149,27 +168,3 @@ npx vsce package
 ## Packaging Notes
 
 The extension manifest points at `out/extension.js`, so compile before packaging. The packaged extension details page is rendered from this README. If VS Code still shows "No README available", rebuild the `.vsix` and reinstall the newly packaged file.
-
-The project includes packaging scripts that compile first, then build the `.vsix`:
-
-```powershell
-npm run package:vsix
-```
-
-Use `package:vsix` when you want to rebuild the current version number.
-
-Use the version-bump scripts when you are preparing a new release. They run `npm version <patch|minor|major> --no-git-tag-version`, which updates `package.json` and `package-lock.json` without creating a git commit or tag, then compiles, lints, runs unit tests, and packages the `.vsix`.
-
-```powershell
-npm run package:patch
-npm run package:minor
-npm run package:major
-```
-
-Choose the bump type using normal semantic-versioning rules:
-
-| Script | Use when |
-| --- | --- |
-| `npm run package:patch` | Fixes or small internal changes, for example `0.1.1` -> `0.1.2`. |
-| `npm run package:minor` | New backward-compatible features, for example `0.1.1` -> `0.2.0`. |
-| `npm run package:major` | Breaking changes, for example `0.1.1` -> `1.0.0`. |
