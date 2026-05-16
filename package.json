@@ -1,0 +1,115 @@
+{
+  "name": "codex-local-meter",
+  "displayName": "Codex Local Meter",
+  "description": "Estimates local Codex CLI usage from ~/.codex session files and shows a status bar item. Local-only, no network calls, no telemetry.",
+  "version": "0.1.0",
+  "publisher": "codex-local-meter",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "codex",
+    "usage",
+    "meter",
+    "local"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexLocalMeter.openStatus",
+        "title": "Codex Local Meter: Open Status"
+      },
+      {
+        "command": "codexLocalMeter.refreshNow",
+        "title": "Codex Local Meter: Refresh Now"
+      },
+      {
+        "command": "codexLocalMeter.selectCodexFolder",
+        "title": "Codex Local Meter: Select Codex Folder"
+      },
+      {
+        "command": "codexLocalMeter.openSettings",
+        "title": "Codex Local Meter: Open Settings"
+      },
+      {
+        "command": "codexLocalMeter.showDiagnostics",
+        "title": "Codex Local Meter: Show Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "Codex Local Meter",
+      "properties": {
+        "codexLocalMeter.codexPath": {
+          "type": "string",
+          "default": "",
+          "description": "Override the Codex folder path. Leave empty to use ~/.codex."
+        },
+        "codexLocalMeter.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 30,
+          "description": "How often to re-read Codex files (seconds). Minimum 30."
+        },
+        "codexLocalMeter.showFiveHourUsage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show 5-hour estimated usage in the status bar."
+        },
+        "codexLocalMeter.showWeeklyUsage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show 7-day estimated usage in the tooltip."
+        },
+        "codexLocalMeter.warningThresholdPercent": {
+          "type": "number",
+          "default": 70,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Show yellow warning color at or above this percentage."
+        },
+        "codexLocalMeter.dangerThresholdPercent": {
+          "type": "number",
+          "default": 90,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Show red danger color at or above this percentage."
+        },
+        "codexLocalMeter.compactMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Shorten status bar text (e.g. 'Codex 42%' instead of 'Codex: 42% 5h')."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "unit-test": "mocha out/test/suite/usageCalculator.test.js out/test/suite/codexReader.test.js --timeout 10000 --ui tdd",
+    "test": "node ./out/test/runTests.js",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^3.9.1",
+    "eslint": "^8.56.0",
+    "mocha": "^10.3.0",
+    "typescript": "^5.3.3"
+  }
+}
