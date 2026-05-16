@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
 import { formatTokens, formatRelativeTime } from './usageCalculator';
+import { buildStatusBarText } from './statusBarText';
 
 export class StatusBarManager implements vscode.Disposable {
     private readonly item: vscode.StatusBarItem;
@@ -13,7 +14,7 @@ export class StatusBarManager implements vscode.Disposable {
         );
         this.item.command = 'codexLocalMeter.openStatus';
         this.item.name = 'Codex Local Meter';
-        this.item.text = '$(graph) Codex: …';
+        this.item.text = '$(graph) ...';
         this.item.show();
     }
 
@@ -27,7 +28,7 @@ export class StatusBarManager implements vscode.Disposable {
 
     /** Shows a transient "refreshing" indicator without waiting for the real data. */
     setRefreshing(): void {
-        this.item.text = '$(sync~spin) Codex: …';
+        this.item.text = '$(sync~spin) ...';
     }
 
     dispose(): void {
@@ -40,51 +41,7 @@ export class StatusBarManager implements vscode.Disposable {
 // ---------------------------------------------------------------------------
 
 function buildText(summary: UsageSummary, settings: Settings): string {
-    const icon = '$(graph)';
-
-    if (summary.sessionCount === 0 && summary.parseErrors.length === 0) {
-        return `${icon} Codex: —`;
-    }
-
-    if (settings.compactMode) {
-        return buildCompactText(summary);
-    }
-
-    return buildFullText(summary, settings);
-}
-
-function buildFullText(summary: UsageSummary, settings: Settings): string {
-    const icon = '$(graph)';
-
-    if (!settings.showFiveHourUsage) {
-        return `${icon} Codex`;
-    }
-
-    // Prefer the authoritative rate-limit % from the Codex API
-    if (summary.primaryUsedPercent !== undefined) {
-        return `${icon} Codex: ${summary.primaryUsedPercent.toFixed(1)}% 5h`;
-    }
-
-    if (summary.isEstimated) {
-        const msgs = summary.fiveHourMessages ?? 0;
-        return `${icon} Codex: ~${msgs} msgs 5h`;
-    }
-
-    const tokens = summary.fiveHourTokens ?? 0;
-    const formatted = formatTokens(tokens) ?? '0';
-    return `${icon} Codex: ${formatted} 5h`;
-}
-
-function buildCompactText(summary: UsageSummary): string {
-    if (summary.primaryUsedPercent !== undefined) {
-        return `Codex ${summary.primaryUsedPercent.toFixed(1)}%`;
-    }
-    if (summary.isEstimated) {
-        const msgs = summary.fiveHourMessages ?? 0;
-        return `Codex ~${msgs}`;
-    }
-    const tokens = formatTokens(summary.fiveHourTokens ?? 0) ?? '0';
-    return `Codex ${tokens}`;
+    return buildStatusBarText(summary, settings);
 }
 
 // ---------------------------------------------------------------------------

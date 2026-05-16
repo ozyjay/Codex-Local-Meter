@@ -1,8 +1,8 @@
 {
   "name": "codex-local-meter",
   "displayName": "Codex Local Meter",
-  "description": "Estimates local Codex CLI usage from ~/.codex session files and shows a status bar item. Local-only, no network calls, no telemetry.",
-  "version": "0.1.0",
+  "description": "Local-only Codex usage estimates in the VS Code status bar from your local ~/.codex session files.",
+  "version": "0.1.1",
   "publisher": "codex-local-meter",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -14,10 +14,28 @@
   ],
   "keywords": [
     "codex",
+    "codex cli",
+    "openai codex",
     "usage",
+    "rate limit",
     "meter",
-    "local"
+    "status bar",
+    "local",
+    "privacy"
   ],
+  "galleryBanner": {
+    "color": "#151521",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozyjay/Codex-Local-Meter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ozyjay/Codex-Local-Meter/issues"
+  },
+  "homepage": "https://github.com/ozyjay/Codex-Local-Meter#readme",
+  "qna": false,
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -86,7 +104,7 @@
         "codexLocalMeter.compactMode": {
           "type": "boolean",
           "default": false,
-          "description": "Shorten status bar text (e.g. 'Codex 42%' instead of 'Codex: 42% 5h')."
+          "description": "Shorten status bar text (e.g. '42%' instead of '42% 5h')."
         }
       }
     }
@@ -96,9 +114,10 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "unit-test": "mocha out/test/suite/usageCalculator.test.js out/test/suite/codexReader.test.js --timeout 10000 --ui tdd",
+    "unit-test": "mocha out/test/suite/usageCalculator.test.js out/test/suite/codexReader.test.js out/test/suite/statusBarText.test.js --timeout 10000 --ui tdd",
     "test": "node ./out/test/runTests.js",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "package:vsix": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
