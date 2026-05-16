@@ -4,6 +4,7 @@
 scripts/**
 src/**
 out/test/**
+out/icon-font/**
 node_modules/**
 AGENTS.md
 .gitignore
