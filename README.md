@@ -32,13 +32,13 @@ Examples:
 
 | State | Example |
 | --- | --- |
-| Rate-limit data found | `$(dashboard) 42.0% 5h` |
-| Token counts found | `$(dashboard) 12.4k 5h` |
-| Message-count fallback | `$(dashboard) ~12 msgs 5h` |
-| No local data yet | `$(dashboard) --` |
-| Compact mode | `$(dashboard) 42.0%` |
+| Rate-limit data found | `$(codex-local-meter) 42.0% 5h` |
+| Token counts found | `$(codex-local-meter) 12.4k 5h` |
+| Message-count fallback | `$(codex-local-meter) ~12 msgs 5h` |
+| No local data yet | `$(codex-local-meter) --` |
+| Compact mode | `$(codex-local-meter) 42.0%` |
 
-The status bar changes color when usage reaches the configured warning or danger threshold.
+The status bar text changes color when usage reaches the configured warning or danger threshold.
 
 ## Details Panel
 

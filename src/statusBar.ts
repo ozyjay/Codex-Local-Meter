@@ -3,6 +3,7 @@ import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
 import { formatTokens, formatRelativeTime } from './usageCalculator';
 import { buildStatusBarText } from './statusBarText';
+import { resolveStatusBarBackgroundToken, resolveStatusBarSeverity } from './statusBarColors';
 
 export class StatusBarManager implements vscode.Disposable {
     private readonly item: vscode.StatusBarItem;
@@ -14,7 +15,7 @@ export class StatusBarManager implements vscode.Disposable {
         );
         this.item.command = 'codexLocalMeter.openStatus';
         this.item.name = 'Codex Local Meter';
-        this.item.text = '$(dashboard) ...';
+        this.item.text = '$(codex-local-meter) ...';
         this.item.show();
     }
 
@@ -146,13 +147,11 @@ function usagePercent(summary: UsageSummary): number | undefined {
 }
 
 function resolveColor(pct: number | undefined, settings: Settings): vscode.ThemeColor | undefined {
-    if (pct === undefined) {
-        return undefined;
-    }
-    if (pct >= settings.dangerThresholdPercent) {
+    const severity = resolveStatusBarSeverity(pct, settings);
+    if (severity === 'danger') {
         return new vscode.ThemeColor('statusBarItem.errorForeground');
     }
-    if (pct >= settings.warningThresholdPercent) {
+    if (severity === 'warning') {
         return new vscode.ThemeColor('statusBarItem.warningForeground');
     }
     return undefined;
@@ -162,14 +161,5 @@ function resolveBackground(
     pct: number | undefined,
     settings: Settings
 ): vscode.ThemeColor | undefined {
-    if (pct === undefined) {
-        return undefined;
-    }
-    if (pct >= settings.dangerThresholdPercent) {
-        return new vscode.ThemeColor('statusBarItem.errorBackground');
-    }
-    if (pct >= settings.warningThresholdPercent) {
-        return new vscode.ThemeColor('statusBarItem.warningBackground');
-    }
-    return undefined;
+    return resolveStatusBarBackgroundToken(pct, settings);
 }

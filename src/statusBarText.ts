@@ -1,7 +1,7 @@
 import { Settings } from './settingsManager';
 import { UsageSummary, formatTokens } from './usageCalculator';
 
-const statusBarIcon = '$(dashboard)';
+const statusBarIcon = '$(codex-local-meter)';
 
 export function buildStatusBarText(summary: UsageSummary, settings: Settings): string {
     const icon = statusBarIcon;
