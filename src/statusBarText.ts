@@ -1,8 +1,10 @@
 import { Settings } from './settingsManager';
 import { UsageSummary, formatTokens } from './usageCalculator';
 
+const statusBarIcon = '$(dashboard)';
+
 export function buildStatusBarText(summary: UsageSummary, settings: Settings): string {
-    const icon = '$(graph)';
+    const icon = statusBarIcon;
 
     if (summary.sessionCount === 0 && summary.parseErrors.length === 0) {
         return `${icon} --`;
@@ -16,7 +18,7 @@ export function buildStatusBarText(summary: UsageSummary, settings: Settings): s
 }
 
 function buildFullText(summary: UsageSummary, settings: Settings): string {
-    const icon = '$(graph)';
+    const icon = statusBarIcon;
 
     if (!settings.showFiveHourUsage) {
         return icon;
@@ -37,7 +39,7 @@ function buildFullText(summary: UsageSummary, settings: Settings): string {
 }
 
 function buildCompactText(summary: UsageSummary): string {
-    const icon = '$(graph)';
+    const icon = statusBarIcon;
 
     if (summary.primaryUsedPercent !== undefined) {
         return `${icon} ${summary.primaryUsedPercent.toFixed(1)}%`;

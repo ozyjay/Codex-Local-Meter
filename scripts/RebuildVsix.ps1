@@ -2,7 +2,9 @@
 param(
     [switch]$Install,
     [switch]$SkipLint,
-    [switch]$SkipUnitTests
+    [switch]$SkipUnitTests,
+    [ValidateSet('none', 'patch', 'minor', 'major')]
+    [string]$VersionBump = 'none'
 )
 
 Set-StrictMode -Version Latest
@@ -19,6 +21,12 @@ try {
     if ($Install) {
         Write-Host 'Installing npm dependencies...'
         npm install
+        Write-Host ''
+    }
+
+    if ($VersionBump -ne 'none') {
+        Write-Host "Bumping package version: $VersionBump"
+        npm version $VersionBump --no-git-tag-version
         Write-Host ''
     }
 

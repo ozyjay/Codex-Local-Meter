@@ -32,11 +32,11 @@ Examples:
 
 | State | Example |
 | --- | --- |
-| Rate-limit data found | `$(graph) 42.0% 5h` |
-| Token counts found | `$(graph) 12.4k 5h` |
-| Message-count fallback | `$(graph) ~12 msgs 5h` |
-| No local data yet | `$(graph) --` |
-| Compact mode | `$(graph) 42.0%` |
+| Rate-limit data found | `$(dashboard) 42.0% 5h` |
+| Token counts found | `$(dashboard) 12.4k 5h` |
+| Message-count fallback | `$(dashboard) ~12 msgs 5h` |
+| No local data yet | `$(dashboard) --` |
+| Compact mode | `$(dashboard) 42.0%` |
 
 The status bar changes color when usage reaches the configured warning or danger threshold.
 
@@ -130,7 +130,7 @@ Run the VS Code extension test runner:
 npm test
 ```
 
-Package locally:
+Package locally with `vsce` directly:
 
 ```powershell
 npx vsce package
@@ -149,3 +149,27 @@ npx vsce package
 ## Packaging Notes
 
 The extension manifest points at `out/extension.js`, so compile before packaging. The packaged extension details page is rendered from this README. If VS Code still shows "No README available", rebuild the `.vsix` and reinstall the newly packaged file.
+
+The project includes packaging scripts that compile first, then build the `.vsix`:
+
+```powershell
+npm run package:vsix
+```
+
+Use `package:vsix` when you want to rebuild the current version number.
+
+Use the version-bump scripts when you are preparing a new release. They run `npm version <patch|minor|major> --no-git-tag-version`, which updates `package.json` and `package-lock.json` without creating a git commit or tag, then compiles, lints, runs unit tests, and packages the `.vsix`.
+
+```powershell
+npm run package:patch
+npm run package:minor
+npm run package:major
+```
+
+Choose the bump type using normal semantic-versioning rules:
+
+| Script | Use when |
+| --- | --- |
+| `npm run package:patch` | Fixes or small internal changes, for example `0.1.1` -> `0.1.2`. |
+| `npm run package:minor` | New backward-compatible features, for example `0.1.1` -> `0.2.0`. |
+| `npm run package:major` | Breaking changes, for example `0.1.1` -> `1.0.0`. |

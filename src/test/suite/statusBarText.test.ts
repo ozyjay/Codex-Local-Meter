@@ -31,7 +31,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(graph) 42.0% 5h');
+        assert.strictEqual(text, '$(dashboard) 42.0% 5h');
         assert.ok(!text.includes('Codex'));
     });
 
@@ -41,7 +41,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(graph) 12.4k 5h');
+        assert.strictEqual(text, '$(dashboard) 12.4k 5h');
     });
 
     test('formats estimated message fallback without repeating the product name', () => {
@@ -50,7 +50,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(graph) ~12 msgs 5h');
+        assert.strictEqual(text, '$(dashboard) ~12 msgs 5h');
     });
 
     test('formats compact mode with the icon and value only', () => {
@@ -59,7 +59,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             { ...baseSettings, compactMode: true }
         );
 
-        assert.strictEqual(text, '$(graph) 42.0%');
+        assert.strictEqual(text, '$(dashboard) 42.0%');
     });
 
     test('formats no-data state quietly', () => {
@@ -68,6 +68,6 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(graph) --');
+        assert.strictEqual(text, '$(dashboard) --');
     });
 });

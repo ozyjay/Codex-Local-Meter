@@ -14,7 +14,7 @@ export class StatusBarManager implements vscode.Disposable {
         );
         this.item.command = 'codexLocalMeter.openStatus';
         this.item.name = 'Codex Local Meter';
-        this.item.text = '$(graph) ...';
+        this.item.text = '$(dashboard) ...';
         this.item.show();
     }
 
