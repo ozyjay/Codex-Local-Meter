@@ -2,7 +2,7 @@
   "name": "codex-local-meter",
   "displayName": "Codex Local Meter",
   "description": "Local-only Codex usage estimates in the VS Code status bar from your local ~/.codex session files.",
-  "version": "0.1.15",
+  "version": "0.1.21",
   "publisher": "codex-local-meter",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -132,6 +132,7 @@
     "package:major": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump major"
   },
   "devDependencies": {
+    "@resvg/resvg-js-cli": "^2.6.2-beta.1",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",

@@ -1,27 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <g transform="translate(64 58)" fill="none" stroke="#151521" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
-    <g transform="rotate(0)">
-      <path d="M0-29c10 0 17 7 17 16 0 12-11 17-21 11"/>
-    </g>
-    <g transform="rotate(60)">
-      <path d="M0-29c10 0 17 7 17 16 0 12-11 17-21 11"/>
-    </g>
-    <g transform="rotate(120)">
-      <path d="M0-29c10 0 17 7 17 16 0 12-11 17-21 11"/>
-    </g>
-    <g transform="rotate(180)">
-      <path d="M0-29c10 0 17 7 17 16 0 12-11 17-21 11"/>
-    </g>
-    <g transform="rotate(240)">
-      <path d="M0-29c10 0 17 7 17 16 0 12-11 17-21 11"/>
-    </g>
-    <g transform="rotate(300)">
-      <path d="M0-29c10 0 17 7 17 16 0 12-11 17-21 11"/>
-    </g>
-  </g>
-  <circle cx="64" cy="58" r="8" fill="#ffffff"/>
-  <rect x="66" y="72" width="42" height="32" rx="8" fill="#4ec9b0"/>
-  <rect x="77" y="82" width="20" height="13" rx="2" fill="none" stroke="#151521" stroke-width="4"/>
-  <path d="M87 95v5" stroke="#151521" stroke-width="4" stroke-linecap="round"/>
-  <path d="M80 100h14" stroke="#151521" stroke-width="4" stroke-linecap="round"/>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M93 8H35C20.0883 8 8 20.0883 8 35V93C8 107.912 20.0883 120 35 120H93C107.912 120 120 107.912 120 93V35C120 20.0883 107.912 8 93 8Z" fill="url(#paint0_linear_1_11)"/>
+<path d="M93 8H35C20.0883 8 8 20.0883 8 35V93C8 107.912 20.0883 120 35 120H93C107.912 120 120 107.912 120 93V35C120 20.0883 107.912 8 93 8Z" fill="url(#paint1_radial_1_11)"/>
+<path d="M29 82C23 54 42 29 64 29C89 29 108 48 108 73" stroke="#2D3347" stroke-width="10" stroke-linecap="round"/>
+<path d="M29 82C23 54 42 29 64 29C84 29 100 41 106 59" stroke="url(#paint2_linear_1_11)" stroke-width="10" stroke-linecap="round"/>
+<path d="M106 65C109.314 65 112 62.3137 112 59C112 55.6863 109.314 53 106 53C102.686 53 100 55.6863 100 59C100 62.3137 102.686 65 106 65Z" fill="#E9F8FF"/>
+<path d="M106 62C107.657 62 109 60.6569 109 59C109 57.3431 107.657 56 106 56C104.343 56 103 57.3431 103 59C103 60.6569 104.343 62 106 62Z" fill="#38BDF8"/>
+<path d="M46 48L60 64L46 80" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M70 78H93" stroke="white" stroke-width="9" stroke-linecap="round"/>
+<path opacity="0.9" d="M35 97C36.6569 97 38 95.6569 38 94C38 92.3431 36.6569 91 35 91C33.3431 91 32 92.3431 32 94C32 95.6569 33.3431 97 35 97Z" fill="#23F7B5"/>
+<path opacity="0.8" d="M47 100C48.1046 100 49 99.1046 49 98C49 96.8954 48.1046 96 47 96C45.8954 96 45 96.8954 45 98C45 99.1046 45.8954 100 47 100Z" fill="#38BDF8"/>
+<path opacity="0.75" d="M59 102C60.1046 102 61 101.105 61 100C61 98.8954 60.1046 98 59 98C57.8954 98 57 98.8954 57 100C57 101.105 57.8954 102 59 102Z" fill="#A78BFA"/>
+<defs>
+<linearGradient id="paint0_linear_1_11" x1="16" y1="14" x2="116" y2="120" gradientUnits="userSpaceOnUse">
+<stop stop-color="#23283A"/>
+<stop offset="0.55" stop-color="#11131F"/>
+<stop offset="1" stop-color="#07080D"/>
+</linearGradient>
+<radialGradient id="paint1_radial_1_11" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(83 39) rotate(121) scale(78 72)">
+<stop stop-color="#38BDF8" stop-opacity="0.34"/>
+<stop offset="0.56" stop-color="#38BDF8" stop-opacity="0.08"/>
+<stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="paint2_linear_1_11" x1="25" y1="84" x2="104" y2="36" gradientUnits="userSpaceOnUse">
+<stop stop-color="#23F7B5"/>
+<stop offset="0.52" stop-color="#38BDF8"/>
+<stop offset="1" stop-color="#A78BFA"/>
+</linearGradient>
+</defs>
 </svg>

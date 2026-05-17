@@ -87,6 +87,21 @@ Codex Local Meter scans local Codex JSONL session files and looks for usage-rele
 
 These numbers are best-effort local estimates. They are not official billing records, account quota records, or service-side usage statements.
 
+## Image Assets
+
+The `images/` directory contains both hand-authored source files and generated outputs.
+
+| File | Kind | How to update |
+| --- | --- | --- |
+| `icon-mono.svg` | **Source** — hand-authored | Edit directly. Monochrome filled paths only (no stroke, no colour); font renderers discard those. |
+| `icon.svg` | **Source** — hand-authored | Edit directly. Full-colour version used as the marketplace/extension thumbnail. |
+| `codex-local-meter.woff` | **Generated** from `icon-mono.svg` | Rebuilt automatically by `scripts/RebuildVsix.ps1` via `svgtofont`. Do not hand-edit. |
+| `icon.png` | **Generated** from `icon.svg` | Regenerate with `npx @resvg/resvg-js-cli images/icon.svg images/icon.png` after changing `icon.svg`. Not touched by `RebuildVsix.ps1`. |
+
+The two SVGs serve different purposes. `icon-mono.svg` is the status bar glyph source — it must be plain filled shapes so `svgtofont` can embed it as a font glyph. `icon.svg` is the richer coloured version displayed in the VS Code marketplace and the Extensions panel.
+
+Note: `svgtofont` output is non-deterministic. `codex-local-meter.woff` will appear modified in git after every rebuild even when `icon-mono.svg` has not changed. Commit the WOFF only when the source SVG has actually been updated.
+
 ## Troubleshooting
 
 If the status bar shows no data:

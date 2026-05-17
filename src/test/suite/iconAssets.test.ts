@@ -12,4 +12,13 @@ suite('icon assets', () => {
         assert.ok(!svg.includes('fill-rule'), 'status icon source should not depend on fill-rule');
         assert.ok(!svg.includes('stroke='), 'status icon source should use closed filled paths for icon fonts');
     });
+
+    test('package rebuild regenerates marketplace png from svg source', () => {
+        const rebuildScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'RebuildVsix.ps1'), 'utf8');
+
+        assert.ok(rebuildScript.includes('Build-MarketplaceIcon'), 'rebuild script should define marketplace icon generation');
+        assert.ok(rebuildScript.includes('images/icon.svg'), 'rebuild script should read the marketplace SVG source');
+        assert.ok(rebuildScript.includes('images/icon.png'), 'rebuild script should write the marketplace PNG output');
+        assert.ok(rebuildScript.includes('@resvg/resvg-js-cli'), 'rebuild script should use the documented SVG to PNG renderer');
+    });
 });

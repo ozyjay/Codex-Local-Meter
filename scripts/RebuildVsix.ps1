@@ -44,6 +44,24 @@ function Build-IconFont {
     Copy-Item -LiteralPath $generatedIconFont -Destination $iconFont -Force
 }
 
+function Build-MarketplaceIcon {
+    $iconSource = Join-Path $repoRoot 'images/icon.svg'
+    $iconPng = Join-Path $repoRoot 'images/icon.png'
+
+    if (-not (Test-Path -LiteralPath $iconSource)) {
+        throw "Marketplace icon source not found: $iconSource"
+    }
+
+    npx --no-install @resvg/resvg-js-cli $iconSource $iconPng
+    if ($LASTEXITCODE -ne 0) {
+        throw "Marketplace icon generation failed with exit code $LASTEXITCODE."
+    }
+
+    if (-not (Test-Path -LiteralPath $iconPng)) {
+        throw "Marketplace icon generation completed but no PNG was found: $iconPng"
+    }
+}
+
 try {
     Write-Host 'Codex Local Meter VSIX rebuild'
     Write-Host "Repository: $repoRoot"
@@ -63,6 +81,10 @@ try {
 
     Write-Host 'Rebuilding icon font...'
     Build-IconFont
+    Write-Host ''
+
+    Write-Host 'Rebuilding marketplace icon...'
+    Build-MarketplaceIcon
     Write-Host ''
 
     Write-Host 'Compiling TypeScript...'
