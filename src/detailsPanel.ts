@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
-import { formatTokens, formatRelativeTime } from './usageCalculator';
+import { formatPercent, formatTokens, formatRelativeTime } from './usageCalculator';
 
 const VIEW_TYPE = 'codexLocalMeter.details';
 const TITLE = 'Codex Local Meter';
@@ -73,13 +73,13 @@ function buildHtml(
         : '<p class="note ok">✓ Token counts found in local Codex files.</p>';
 
     const fiveHourValue = summary.primaryUsedPercent !== undefined
-        ? `${summary.primaryUsedPercent.toFixed(1)}% of 5-hour rate limit`
+        ? `${formatPercent(summary.primaryUsedPercent)}% of 5-hour rate limit`
         : summary.isEstimated
         ? `~${summary.fiveHourMessages ?? 0} messages`
         : `${formatTokens(summary.fiveHourTokens) ?? '0'} tokens`;
 
     const sevenDayValue = summary.secondaryUsedPercent !== undefined
-        ? `${summary.secondaryUsedPercent.toFixed(1)}% of 7-day rate limit`
+        ? `${formatPercent(summary.secondaryUsedPercent)}% of 7-day rate limit`
         : summary.isEstimated
         ? `~${summary.sevenDayMessages ?? 0} messages`
         : `${formatTokens(summary.sevenDayTokens) ?? '0'} tokens`;

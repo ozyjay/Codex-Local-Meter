@@ -32,7 +32,7 @@ Examples:
 
 | State | Example |
 | --- | --- |
-| Rate-limit data found | `$(codex-local-meter) 42.0% 5h` |
+| Rate-limit data found | `$(codex-local-meter) 42% 5h` |
 | Token counts found | `$(codex-local-meter) 12.4k 5h` |
 | Message-count fallback | `$(codex-local-meter) ~12 msgs 5h` |
 | No local data yet | `$(codex-local-meter) --` |

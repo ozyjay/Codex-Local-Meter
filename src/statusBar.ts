@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
-import { formatTokens, formatRelativeTime } from './usageCalculator';
+import { formatPercent, formatTokens, formatRelativeTime } from './usageCalculator';
 import { buildStatusBarText } from './statusBarText';
 import { resolveStatusBarBackgroundToken, resolveStatusBarSeverity } from './statusBarColors';
 
@@ -63,7 +63,7 @@ function buildTooltip(summary: UsageSummary, settings: Settings): vscode.Markdow
 
     if (settings.showFiveHourUsage) {
         if (summary.primaryUsedPercent !== undefined) {
-            md.appendMarkdown(`| 5-hour rate limit | **${summary.primaryUsedPercent.toFixed(1)}%** used |\n`);
+            md.appendMarkdown(`| 5-hour rate limit | **${formatPercent(summary.primaryUsedPercent)}%** used |\n`);
         } else if (summary.isEstimated) {
             md.appendMarkdown(`| 5-hour activity | ~${summary.fiveHourMessages ?? 0} messages |\n`);
         } else {
@@ -73,7 +73,7 @@ function buildTooltip(summary: UsageSummary, settings: Settings): vscode.Markdow
 
     if (settings.showWeeklyUsage) {
         if (summary.secondaryUsedPercent !== undefined) {
-            md.appendMarkdown(`| 7-day rate limit | **${summary.secondaryUsedPercent.toFixed(1)}%** used |\n`);
+            md.appendMarkdown(`| 7-day rate limit | **${formatPercent(summary.secondaryUsedPercent)}%** used |\n`);
         } else if (summary.isEstimated) {
             md.appendMarkdown(`| 7-day activity | ~${summary.sevenDayMessages ?? 0} messages |\n`);
         } else {

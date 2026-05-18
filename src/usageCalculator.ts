@@ -143,6 +143,13 @@ export function formatTokens(count: number | undefined): string | undefined {
 }
 
 /**
+ * Formats a rate-limit percentage without hiding meaningful fractional precision.
+ */
+export function formatPercent(percent: number): string {
+    return Number(percent.toFixed(2)).toString();
+}
+
+/**
  * Returns a human-readable relative time string, e.g. "3 min ago", "2 h ago".
  */
 export function formatRelativeTime(date: Date | undefined): string {

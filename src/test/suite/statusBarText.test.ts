@@ -31,8 +31,17 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 42.0% 5h');
+        assert.strictEqual(text, '$(codex-local-meter) 42% 5h');
         assert.ok(!text.includes('Codex'));
+    });
+
+    test('preserves fractional rate-limit percentages', () => {
+        const text = buildStatusBarText(
+            summary({ primaryUsedPercent: 2.55 }),
+            baseSettings
+        );
+
+        assert.strictEqual(text, '$(codex-local-meter) 2.55% 5h');
     });
 
     test('formats token usage without repeating the product name', () => {
@@ -55,11 +64,11 @@ suite('statusBarText - buildStatusBarText()', () => {
 
     test('formats compact mode with the icon and value only', () => {
         const text = buildStatusBarText(
-            summary({ primaryUsedPercent: 42 }),
+            summary({ primaryUsedPercent: 42.5 }),
             { ...baseSettings, compactMode: true }
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 42.0%');
+        assert.strictEqual(text, '$(codex-local-meter) 42.5%');
     });
 
     test('formats no-data state quietly', () => {
