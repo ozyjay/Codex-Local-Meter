@@ -143,10 +143,10 @@ export function formatTokens(count: number | undefined): string | undefined {
 }
 
 /**
- * Formats a rate-limit percentage without hiding meaningful fractional precision.
+ * Formats a rate-limit percentage as a whole-number estimate.
  */
 export function formatPercent(percent: number): string {
-    return Number(percent.toFixed(2)).toString();
+    return Math.round(percent).toString();
 }
 
 /**

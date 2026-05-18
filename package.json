@@ -2,7 +2,7 @@
   "name": "codex-local-meter",
   "displayName": "Codex Local Meter",
   "description": "Local-only Codex usage estimates in the VS Code status bar from your local ~/.codex session files.",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "publisher": "codex-local-meter",
   "license": "MIT",
   "icon": "images/icon.png",

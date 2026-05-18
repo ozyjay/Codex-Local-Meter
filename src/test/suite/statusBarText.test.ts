@@ -35,13 +35,13 @@ suite('statusBarText - buildStatusBarText()', () => {
         assert.ok(!text.includes('Codex'));
     });
 
-    test('preserves fractional rate-limit percentages', () => {
+    test('rounds fractional rate-limit percentages to whole numbers', () => {
         const text = buildStatusBarText(
             summary({ primaryUsedPercent: 2.55 }),
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 2.55% 5h');
+        assert.strictEqual(text, '$(codex-local-meter) 3% 5h');
     });
 
     test('formats token usage without repeating the product name', () => {
@@ -68,7 +68,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             { ...baseSettings, compactMode: true }
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 42.5%');
+        assert.strictEqual(text, '$(codex-local-meter) 43%');
     });
 
     test('formats no-data state quietly', () => {
