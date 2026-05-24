@@ -6,6 +6,7 @@ import { getSettings } from './settingsManager';
 import { StatusBarManager } from './statusBar';
 import { DetailsPanel } from './detailsPanel';
 import { showDiagnostics } from './diagnostics';
+import { createRefreshScheduler } from './refreshScheduler';
 
 export { UsageSummary };
 
@@ -32,6 +33,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         );
         return summary;
     }
+    const refreshScheduler = createRefreshScheduler(refresh);
+    const requestRefresh = (): Promise<UsageSummary> => refreshScheduler.requestRefresh();
 
     // Auto-refresh timer — recreated whenever settings change
     let refreshTimer: ReturnType<typeof setInterval> | undefined;
@@ -41,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             clearInterval(refreshTimer);
         }
         const { refreshIntervalSeconds } = getSettings();
-        refreshTimer = setInterval(() => { void refresh(); }, refreshIntervalSeconds * 1000);
+        refreshTimer = setInterval(() => { void requestRefresh(); }, refreshIntervalSeconds * 1000);
     }
 
     // Dispose the timer on deactivation
@@ -56,7 +59,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const sessionsUri = vscode.Uri.file(path.join(codexPath, 'sessions'));
         const pattern = new vscode.RelativePattern(sessionsUri, '**/*.jsonl');
         fsWatcher = vscode.workspace.createFileSystemWatcher(pattern);
-        const onActivity = () => { void refresh(); };
+        const onActivity = () => { void requestRefresh(); };
         fsWatcher.onDidChange(onActivity);
         fsWatcher.onDidCreate(onActivity);
     }
@@ -70,7 +73,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             if (e.affectsConfiguration('codexLocalMeter')) {
                 startTimer();
                 startWatcher();
-                void refresh();
+                void requestRefresh();
             }
         })
     );
@@ -78,12 +81,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Register commands
     context.subscriptions.push(
         vscode.commands.registerCommand('codexLocalMeter.openStatus', async () => {
-            const summary = await refresh();
+            const summary = await requestRefresh();
             detailsPanel.show(summary, context.extensionUri);
         }),
 
         vscode.commands.registerCommand('codexLocalMeter.refreshNow', async () => {
-            await refresh();
+            await requestRefresh();
         }),
 
         vscode.commands.registerCommand('codexLocalMeter.selectCodexFolder', async () => {
@@ -97,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 await vscode.workspace
                     .getConfiguration('codexLocalMeter')
                     .update('codexPath', uris[0].fsPath, vscode.ConfigurationTarget.Global);
-                await refresh();
+                await requestRefresh();
             }
         }),
 
@@ -109,13 +112,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }),
 
         vscode.commands.registerCommand('codexLocalMeter.showDiagnostics', async () => {
-            const summary = await refresh();
+            const summary = await requestRefresh();
             await showDiagnostics(outputChannel, summary);
         })
     );
 
     // Initial load
-    await refresh();
+    await requestRefresh();
     startTimer();
     startWatcher();
 }
