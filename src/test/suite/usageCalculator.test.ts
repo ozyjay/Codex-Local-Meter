@@ -166,6 +166,29 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.secondaryUsedPercent, 1.0, 'most recent secondary % wins');
     });
 
+    test('primaryUsedPercent: later event wins when rate-limit timestamps are equal', () => {
+        const timestamp = new Date();
+        const events: RawEvent[] = [
+            {
+                sessionId: 's1',
+                timestamp,
+                primaryUsedPercent: 2.0,
+                secondaryUsedPercent: 1.0,
+            },
+            {
+                sessionId: 's1',
+                timestamp,
+                inputTokens: 1000,
+                outputTokens: 50,
+                primaryUsedPercent: 6.0,
+                secondaryUsedPercent: 2.0,
+            },
+        ];
+        const s = calculate(events, '/fake', []);
+        assert.strictEqual(s.primaryUsedPercent, 6.0, 'later same-timestamp primary % wins');
+        assert.strictEqual(s.secondaryUsedPercent, 2.0, 'later same-timestamp secondary % wins');
+    });
+
     test('primaryUsedPercent: undefined when no events carry rate-limit data', () => {
         const events: RawEvent[] = [
             makeEvent({ minsAgo: 5, inputTokens: 100, outputTokens: 50, sessionId: 's1' }),
