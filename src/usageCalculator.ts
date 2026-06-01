@@ -71,7 +71,8 @@ export function calculate(
         }
 
         // Track most-recent rate-limit state (authoritative values from the Codex API)
-        if ((event.primaryUsedPercent !== undefined || event.secondaryUsedPercent !== undefined)
+        if (eventMs >= fiveHourCutoff
+            && (event.primaryUsedPercent !== undefined || event.secondaryUsedPercent !== undefined)
             && eventMs >= latestRateLimitTs) {
             latestRateLimitTs = eventMs;
             if (event.primaryUsedPercent !== undefined) {

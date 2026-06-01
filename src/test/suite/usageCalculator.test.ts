@@ -197,6 +197,23 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.primaryUsedPercent, undefined);
         assert.strictEqual(s.secondaryUsedPercent, undefined);
     });
+
+    test('primaryUsedPercent: ignores stale five-hour rate-limit values', () => {
+        const events: RawEvent[] = [
+            makeEvent({
+                minsAgo: 301,
+                inputTokens: 20,
+                outputTokens: 10,
+                primaryUsedPercent: 82,
+                sessionId: 'old',
+            }),
+            makeEvent({ minsAgo: 1, inputTokens: 1, outputTokens: 2, sessionId: 'recent' }),
+        ];
+        const s = calculate(events, '/fake', []);
+        assert.strictEqual(s.primaryUsedPercent, undefined);
+        assert.strictEqual(s.fiveHourTokens, 3);
+        assert.strictEqual(s.sevenDayTokens, 33);
+    });
 });
 
 // ---------------------------------------------------------------------------
