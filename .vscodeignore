@@ -5,6 +5,7 @@ scripts/**
 src/**
 out/test/**
 out/icon-font/**
+out/vsix-check/**
 node_modules/**
 AGENTS.md
 .gitignore
