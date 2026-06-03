@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
-import { formatPercent, formatTokens, formatRelativeTime } from './usageCalculator';
+import { formatPercent, formatTokens } from './usageCalculator';
 import { buildStatusBarText } from './statusBarText';
 import { resolveStatusBarBackgroundToken, resolveStatusBarSeverity } from './statusBarColors';
 
@@ -21,7 +21,7 @@ export class StatusBarManager implements vscode.Disposable {
 
     update(summary: UsageSummary, settings: Settings): void {
         this.item.text = buildText(summary, settings);
-        this.item.tooltip = buildTooltip(summary, settings);
+        this.item.tooltip = buildTooltip(summary);
         const pct = usagePercent(summary);
         this.item.color = resolveColor(pct, settings);
         this.item.backgroundColor = resolveBackground(pct, settings);
@@ -49,66 +49,101 @@ function buildText(summary: UsageSummary, settings: Settings): string {
 // Tooltip (markdown)
 // ---------------------------------------------------------------------------
 
-function buildTooltip(summary: UsageSummary, settings: Settings): vscode.MarkdownString {
+function buildTooltip(summary: UsageSummary): vscode.MarkdownString {
     const md = new vscode.MarkdownString('', true);
-    md.isTrusted = false;
+    md.isTrusted = { enabledCommands: ['codexLocalMeter.openStatus'] };
     md.supportThemeIcons = true;
 
-    const estimate = summary.isEstimated && summary.primaryUsedPercent === undefined
-        ? ' *(estimates — no token counts found)*'
-        : '';
-    md.appendMarkdown(`**Codex Local Meter**${estimate}\n\n`);
+    const percent = fiveHourPercent(summary);
+    const value = fiveHourValue(summary);
+    const source = summary.primaryUsedPercent !== undefined
+        ? 'live local rate-limit data'
+        : summary.isEstimated
+        ? 'message-count estimate'
+        : 'local token count';
 
-    md.appendMarkdown('| | |\n|---|---|\n');
+    md.appendMarkdown('$(codex-local-meter) **Codex Local Meter**\n\n');
+    md.appendMarkdown(`![5-hour usage meter](${circularMeterDataUri(percent, value)})\n\n`);
+    md.appendMarkdown(`$(watch) 5-hour limit: **${escapeMarkdown(value)}**\n\n`);
+    md.appendMarkdown(`\`${escapeCode(source)}\`\n\n`);
 
-    if (settings.showFiveHourUsage) {
-        if (summary.primaryUsedPercent !== undefined) {
-            md.appendMarkdown(`| 5-hour rate limit | **${formatPercent(summary.primaryUsedPercent)}%** used |\n`);
-        } else if (summary.isEstimated) {
-            md.appendMarkdown(`| 5-hour activity | ~${summary.fiveHourMessages ?? 0} messages |\n`);
-        } else {
-            md.appendMarkdown(`| 5-hour tokens | ${formatTokens(summary.fiveHourTokens) ?? '0'} |\n`);
-        }
-    }
-
-    if (settings.showWeeklyUsage) {
-        if (summary.secondaryUsedPercent !== undefined) {
-            md.appendMarkdown(`| 7-day rate limit | **${formatPercent(summary.secondaryUsedPercent)}%** used |\n`);
-        } else if (summary.isEstimated) {
-            md.appendMarkdown(`| 7-day activity | ~${summary.sevenDayMessages ?? 0} messages |\n`);
-        } else {
-            md.appendMarkdown(`| 7-day tokens | ${formatTokens(summary.sevenDayTokens) ?? '0'} |\n`);
-        }
-    }
-
-    // Show token counts as supplemental context when rate-limit % is the primary metric
-    if (summary.primaryUsedPercent !== undefined && !summary.isEstimated) {
-        if (summary.fiveHourTokens !== undefined && settings.showFiveHourUsage) {
-            md.appendMarkdown(`| 5-hour tokens | ${formatTokens(summary.fiveHourTokens) ?? '0'} |\n`);
-        }
-        if (summary.sevenDayTokens !== undefined && settings.showWeeklyUsage) {
-            md.appendMarkdown(`| 7-day tokens | ${formatTokens(summary.sevenDayTokens) ?? '0'} |\n`);
-        }
-    }
-
-    md.appendMarkdown(`| Last activity | ${formatRelativeTime(summary.lastActivity)} |\n`);
-    md.appendMarkdown(`| Sessions (7 d) | ${summary.sessionCount} |\n`);
-
-    if (summary.modelNames.length > 0) {
-        md.appendMarkdown(`| Models | ${summary.modelNames.join(', ')} |\n`);
-    }
-
-    md.appendMarkdown(`| Codex path | \`${summary.codexPath}\` |\n`);
-    md.appendMarkdown(`| Rate limits | ${summary.primaryUsedPercent !== undefined ? 'live ✓' : 'not found'} |\n`);
-    md.appendMarkdown(`| Token counts | ${summary.isEstimated ? 'not found' : 'found ✓'} |\n`);
-
-    if (summary.parseErrors.length > 0) {
-        md.appendMarkdown(`| Parse errors | ${summary.parseErrors.length} (see Diagnostics) |\n`);
-    }
-
-    md.appendMarkdown('\n\n*Click to open details panel.*');
+    md.appendMarkdown('---\n\n');
+    md.appendMarkdown('$(go-to-file) [Open details panel](command:codexLocalMeter.openStatus)');
 
     return md;
+}
+
+function fiveHourPercent(summary: UsageSummary): number | undefined {
+    if (summary.primaryUsedPercent !== undefined) {
+        return summary.primaryUsedPercent;
+    }
+
+    if (summary.isEstimated) {
+        const five = summary.fiveHourMessages;
+        const seven = summary.sevenDayMessages;
+        if (five === undefined || seven === undefined || seven === 0) {
+            return undefined;
+        }
+        return Math.min(100, Math.round((five / (seven / (7 * 24 / 5))) * 100));
+    }
+
+    const five = summary.fiveHourTokens;
+    const seven = summary.sevenDayTokens;
+    if (five === undefined || seven === undefined || seven === 0) {
+        return undefined;
+    }
+    return Math.min(100, Math.round((five / (seven / (7 * 24 / 5))) * 100));
+}
+
+function fiveHourValue(summary: UsageSummary): string {
+    if (summary.primaryUsedPercent !== undefined) {
+        return `${formatPercent(summary.primaryUsedPercent)}% used`;
+    }
+    if (summary.isEstimated) {
+        return `~${summary.fiveHourMessages ?? 0} messages`;
+    }
+    return `${formatTokens(summary.fiveHourTokens) ?? '0'} tokens`;
+}
+
+function circularMeterDataUri(percent: number | undefined, value: string): string {
+    const numericPercent = percent === undefined
+        ? 0
+        : Math.max(0, Math.min(100, Math.round(percent)));
+    const circumference = 326.73;
+    const dashOffset = circumference - (circumference * numericPercent / 100);
+    const centerText = percent === undefined
+        ? '5h'
+        : `${formatPercent(numericPercent)}%`;
+    const detailText = percent === undefined
+        ? value
+        : 'used';
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="188" height="188" viewBox="0 0 188 188" role="img" aria-label="5-hour usage ${escapeSvg(value)}">
+  <rect width="188" height="188" rx="20" fill="transparent"/>
+  <circle cx="94" cy="94" r="52" fill="none" stroke="#3c3c3c" stroke-width="16"/>
+  <circle cx="94" cy="94" r="52" fill="none" stroke="#3794ff" stroke-width="16" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset.toFixed(2)}" transform="rotate(-90 94 94)"/>
+  <text x="94" y="88" fill="#f2f2f2" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" text-anchor="middle">${escapeSvg(centerText)}</text>
+  <text x="94" y="114" fill="#bdbdbd" font-family="Segoe UI, Arial, sans-serif" font-size="16" text-anchor="middle">${escapeSvg(detailText)}</text>
+</svg>`;
+
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function escapeMarkdown(value: string): string {
+    return value.replace(/([\\`*_{}[\]()#+\-.!|])/g, '\\$1');
+}
+
+function escapeCode(value: string): string {
+    return value.replace(/`/g, '\\`');
+}
+
+function escapeSvg(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // ---------------------------------------------------------------------------
