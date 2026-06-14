@@ -21,4 +21,32 @@ suite('icon assets', () => {
         assert.ok(rebuildScript.includes('images/icon.png'), 'rebuild script should write the marketplace PNG output');
         assert.ok(rebuildScript.includes('@resvg/resvg-js-cli'), 'rebuild script should use the documented SVG to PNG renderer');
     });
+
+    test('version bump packaging queries marketplace before computing next version', () => {
+        const rebuildScript = fs.readFileSync(path.join(repoRoot, 'scripts', 'RebuildVsix.ps1'), 'utf8');
+
+        assert.ok(rebuildScript.includes('Get-MarketplaceVersion'), 'rebuild script should fetch the published version');
+        assert.ok(
+            rebuildScript.includes('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery'),
+            'rebuild script should use the Marketplace gallery query API'
+        );
+        assert.ok(
+            rebuildScript.includes('$itemName =') &&
+                rebuildScript.includes('$($identity.Publisher)') &&
+                rebuildScript.includes('$($identity.Name)'),
+            'rebuild script should query the extension by publisher and package name'
+        );
+        assert.ok(
+            rebuildScript.includes('Get-NextVersion'),
+            'rebuild script should compute the next version from the Marketplace version'
+        );
+        assert.ok(
+            rebuildScript.includes('npm version $nextVersion --no-git-tag-version'),
+            'rebuild script should set the exact computed version, not bump from local package.json'
+        );
+        assert.ok(
+            !rebuildScript.includes('npm version $VersionBump --no-git-tag-version'),
+            'rebuild script should not bump directly from the local package.json version'
+        );
+    });
 });

@@ -12,6 +12,10 @@ export interface RawEvent {
     primaryUsedPercent?: number;
     /** 7-day rate-limit used % from Codex API (payload.rate_limits.secondary.used_percent) */
     secondaryUsedPercent?: number;
+    /** 5-hour rate-limit reset timestamp from Codex API (payload.rate_limits.primary.resets_at) */
+    primaryResetsAt?: Date;
+    /** 7-day rate-limit reset timestamp from Codex API (payload.rate_limits.secondary.resets_at) */
+    secondaryResetsAt?: Date;
 }
 
 interface ReadResult {
@@ -195,20 +199,35 @@ function extractCodexDesktopEvent(
 
         let primaryUsedPercent: number | undefined;
         let secondaryUsedPercent: number | undefined;
+        let primaryResetsAt: Date | undefined;
+        let secondaryResetsAt: Date | undefined;
 
         const rl = payload['rate_limits'];
         if (typeof rl === 'object' && rl !== null) {
             const primary = (rl as Record<string, unknown>)['primary'];
             const secondary = (rl as Record<string, unknown>)['secondary'];
             if (typeof primary === 'object' && primary !== null) {
-                primaryUsedPercent = resolveNumber(primary as Record<string, unknown>, 'used_percent');
+                const p = primary as Record<string, unknown>;
+                primaryUsedPercent = resolveNumber(p, 'used_percent');
+                primaryResetsAt = resolveUnixSecondsDate(p, 'resets_at');
             }
             if (typeof secondary === 'object' && secondary !== null) {
-                secondaryUsedPercent = resolveNumber(secondary as Record<string, unknown>, 'used_percent');
+                const s = secondary as Record<string, unknown>;
+                secondaryUsedPercent = resolveNumber(s, 'used_percent');
+                secondaryResetsAt = resolveUnixSecondsDate(s, 'resets_at');
             }
         }
 
-        return { sessionId, timestamp: ts, inputTokens, outputTokens, primaryUsedPercent, secondaryUsedPercent };
+        return {
+            sessionId,
+            timestamp: ts,
+            inputTokens,
+            outputTokens,
+            primaryUsedPercent,
+            secondaryUsedPercent,
+            primaryResetsAt,
+            secondaryResetsAt,
+        };
     }
 
     // user_message events: count as one message turn for the message-count fallback
@@ -236,6 +255,16 @@ function resolveTimestamp(r: Record<string, unknown>): Date | undefined {
 function resolveNumber(r: Record<string, unknown>, key: string): number | undefined {
     const val = r[key];
     return typeof val === 'number' ? val : undefined;
+}
+
+function resolveUnixSecondsDate(r: Record<string, unknown>, key: string): Date | undefined {
+    const seconds = resolveNumber(r, key);
+    if (seconds === undefined) {
+        return undefined;
+    }
+
+    const date = new Date(seconds * 1000);
+    return isNaN(date.getTime()) ? undefined : date;
 }
 
 function resolveNestedNumber(

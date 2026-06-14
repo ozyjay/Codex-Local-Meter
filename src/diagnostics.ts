@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
-import { formatRelativeTime } from './usageCalculator';
+import { formatRelativeTime, formatRelativeFuture } from './usageCalculator';
 
 /**
  * Writes a human-readable diagnostics report to the output channel and reveals it.
@@ -43,6 +43,8 @@ export async function showDiagnostics(
         lines.push(`  5-hour tokens   : ${summary.fiveHourTokens ?? 0}`);
         lines.push(`  7-day tokens    : ${summary.sevenDayTokens ?? 0}`);
     }
+    lines.push(`  5-hour reset    : ${formatReset(summary.primaryResetsAt)}`);
+    lines.push(`  7-day reset     : ${formatReset(summary.secondaryResetsAt)}`);
     lines.push(`  Last activity   : ${formatRelativeTime(summary.lastActivity)}`);
     lines.push(`  Models detected : ${summary.modelNames.length > 0 ? summary.modelNames.join(', ') : '(none)'}`);
     lines.push('');
@@ -71,6 +73,15 @@ export async function showDiagnostics(
         outputChannel.appendLine(line);
     }
     outputChannel.show(true /* preserveFocus */);
+}
+
+function formatReset(date: Date | undefined): string {
+    const remaining = formatRelativeFuture(date);
+    if (!date || !remaining) {
+        return 'not found';
+    }
+
+    return `${remaining} left (${date.toLocaleString()})`;
 }
 
 interface PathStatus {

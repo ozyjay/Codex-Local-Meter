@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { calculate, formatTokens, formatRelativeTime } from '../../usageCalculator';
+import { calculate, formatTokens, formatRelativeTime, formatRelativeFuture } from '../../usageCalculator';
 import { RawEvent } from '../../codexReader';
 
 // ---------------------------------------------------------------------------
@@ -145,12 +145,16 @@ suite('usageCalculator — calculate()', () => {
 
     test('primaryUsedPercent: most-recent rate-limit % is tracked across events', () => {
         const now = Date.now();
+        const olderPrimaryReset = new Date(now + 60 * 60_000);
+        const newerPrimaryReset = new Date(now + 120 * 60_000);
+        const newerSecondaryReset = new Date(now + 3 * 86_400_000);
         const events: RawEvent[] = [
             {
                 sessionId: 's1',
                 timestamp: new Date(now - 10_000), // older
                 primaryUsedPercent: 2.5,
                 secondaryUsedPercent: 0.8,
+                primaryResetsAt: olderPrimaryReset,
             },
             {
                 sessionId: 's1',
@@ -159,11 +163,15 @@ suite('usageCalculator — calculate()', () => {
                 outputTokens: 50,
                 primaryUsedPercent: 3.0,
                 secondaryUsedPercent: 1.0,
+                primaryResetsAt: newerPrimaryReset,
+                secondaryResetsAt: newerSecondaryReset,
             },
         ];
         const s = calculate(events, '/fake', []);
         assert.strictEqual(s.primaryUsedPercent, 3.0, 'most recent primary % wins');
         assert.strictEqual(s.secondaryUsedPercent, 1.0, 'most recent secondary % wins');
+        assert.strictEqual(s.primaryResetsAt?.getTime(), newerPrimaryReset.getTime(), 'most recent primary reset wins');
+        assert.strictEqual(s.secondaryResetsAt?.getTime(), newerSecondaryReset.getTime(), 'most recent secondary reset wins');
     });
 
     test('primaryUsedPercent: later event wins when rate-limit timestamps are equal', () => {
@@ -213,6 +221,30 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.primaryUsedPercent, undefined);
         assert.strictEqual(s.fiveHourTokens, 3);
         assert.strictEqual(s.sevenDayTokens, 33);
+        assert.strictEqual(s.primaryResetsAt, undefined);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// formatRelativeFuture()
+// ---------------------------------------------------------------------------
+
+suite('usageCalculator — formatRelativeFuture()', () => {
+    test('undefined returns undefined', () => {
+        assert.strictEqual(formatRelativeFuture(undefined), undefined);
+    });
+
+    test('future minutes and hours are formatted compactly', () => {
+        assert.strictEqual(formatRelativeFuture(new Date(Date.now() + 25 * 60_000)), '25 min');
+        assert.strictEqual(formatRelativeFuture(new Date(Date.now() + 2 * 3_600_000)), '2 h');
+    });
+
+    test('future days are formatted with one decimal for partial days', () => {
+        assert.strictEqual(formatRelativeFuture(new Date(Date.now() + 36 * 3_600_000)), '1.5 d');
+    });
+
+    test('past dates return now', () => {
+        assert.strictEqual(formatRelativeFuture(new Date(Date.now() - 60_000)), 'now');
     });
 });
 

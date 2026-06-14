@@ -1,5 +1,5 @@
 import { Settings } from './settingsManager';
-import { UsageSummary, formatPercent, formatTokens } from './usageCalculator';
+import { UsageSummary, formatPercent, formatRelativeFuture, formatTokens } from './usageCalculator';
 
 const statusBarIcon = '$(codex-local-meter)';
 
@@ -25,7 +25,9 @@ function buildFullText(summary: UsageSummary, settings: Settings): string {
     }
 
     if (summary.primaryUsedPercent !== undefined) {
-        return `${icon} ${formatPercent(summary.primaryUsedPercent)}% 5h`;
+        const remaining = formatRelativeFuture(summary.primaryResetsAt);
+        const resetText = remaining ? ` · ${remaining} left` : '';
+        return `${icon} ${formatPercent(summary.primaryUsedPercent)}% 5h${resetText}`;
     }
 
     if (summary.isEstimated) {

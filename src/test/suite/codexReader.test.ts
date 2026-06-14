@@ -237,6 +237,8 @@ suite('codexReader — readEvents()', () => {
         assert.strictEqual(tokenEvents[0].outputTokens, 140);
         assert.strictEqual(tokenEvents[0].primaryUsedPercent, 3.0);
         assert.strictEqual(tokenEvents[0].secondaryUsedPercent, 1.0);
+        assert.strictEqual(tokenEvents[0].primaryResetsAt?.getTime(), 1778921770 * 1000);
+        assert.strictEqual(tokenEvents[0].secondaryResetsAt?.getTime(), 1779452078 * 1000);
 
         const rateLimitEvents = result.events.filter(e => e.primaryUsedPercent !== undefined);
         assert.strictEqual(rateLimitEvents.length, 2, 'both token_count events carry rate-limit data');

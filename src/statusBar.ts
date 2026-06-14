@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
-import { formatPercent, formatTokens } from './usageCalculator';
+import { formatPercent, formatRelativeFuture, formatTokens } from './usageCalculator';
 import { buildStatusBarText } from './statusBarText';
 import { resolveStatusBarBackgroundToken, resolveStatusBarSeverity } from './statusBarColors';
 
@@ -65,6 +65,14 @@ function buildTooltip(summary: UsageSummary): vscode.MarkdownString {
     md.appendMarkdown('$(codex-local-meter) **Codex Local Meter**\n\n');
     md.appendMarkdown(`![5-hour usage meter](${circularMeterDataUri(percent, value)})\n\n`);
     md.appendMarkdown(`$(watch) 5-hour limit: **${escapeMarkdown(value)}**\n\n`);
+    const primaryRemaining = formatRelativeFuture(summary.primaryResetsAt);
+    const secondaryRemaining = formatRelativeFuture(summary.secondaryResetsAt);
+    if (primaryRemaining) {
+        md.appendMarkdown(`$(clock) 5-hour reset: **${escapeMarkdown(primaryRemaining)} left**\n\n`);
+    }
+    if (secondaryRemaining) {
+        md.appendMarkdown(`$(calendar) 7-day reset: **${escapeMarkdown(secondaryRemaining)} left**\n\n`);
+    }
     md.appendMarkdown(`\`${escapeCode(source)}\`\n\n`);
 
     md.appendMarkdown('---\n\n');

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
-import { formatPercent, formatTokens, formatRelativeTime } from './usageCalculator';
+import { formatPercent, formatTokens, formatRelativeTime, formatRelativeFuture } from './usageCalculator';
 
 const VIEW_TYPE = 'codexLocalMeter.details';
 const TITLE = 'Codex Local Meter';
@@ -87,11 +87,14 @@ function buildHtml(
         ? `~${summary.sevenDayMessages ?? 0} messages`
         : `${formatTokens(summary.sevenDayTokens) ?? '0'} tokens`;
 
+    const fiveHourRemaining = formatRelativeFuture(summary.primaryResetsAt);
+    const sevenDayRemaining = formatRelativeFuture(summary.secondaryResetsAt);
+
     const fiveHourRateRow = summary.primaryUsedPercent !== undefined
         ? detailRow(
             '5-hour rate limit',
             `<strong>${escapeHtml(formatPercent(summary.primaryUsedPercent))}%</strong> used`,
-            progressBar(summary.primaryUsedPercent, '5-hour rate-limit usage')
+            rateLimitMeta(summary.primaryUsedPercent, '5-hour rate-limit usage', fiveHourRemaining)
         )
         : detailRow(
             summary.isEstimated ? '5-hour activity' : '5-hour tokens',
@@ -103,7 +106,7 @@ function buildHtml(
         ? detailRow(
             '7-day rate limit',
             `<strong>${escapeHtml(formatPercent(summary.secondaryUsedPercent))}%</strong> used`,
-            progressBar(summary.secondaryUsedPercent, '7-day rate-limit usage')
+            rateLimitMeta(summary.secondaryUsedPercent, '7-day rate-limit usage', sevenDayRemaining)
         )
         : detailRow(
             summary.isEstimated ? '7-day activity' : '7-day tokens',
@@ -267,6 +270,11 @@ function buildHtml(
       font-size: 1rem;
       font-weight: 500;
       color: var(--vscode-descriptionForeground);
+    }
+    .metric-meta {
+      color: var(--vscode-descriptionForeground);
+      font-size: 0.92rem;
+      margin-top: 8px;
     }
     .detail-list {
       padding: 0 28px 20px;
@@ -476,8 +484,8 @@ function buildHtml(
       </div>
 
       <div class="meter-grid">
-        ${metricTile('5-hour', fiveHourPrimary, summary.primaryUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens')}
-        ${metricTile('7-day', sevenDayPrimary, summary.secondaryUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens')}
+        ${metricTile('5-hour', fiveHourPrimary, summary.primaryUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', fiveHourRemaining ? `${fiveHourRemaining} left` : undefined)}
+        ${metricTile('7-day', sevenDayPrimary, summary.secondaryUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', sevenDayRemaining ? `${sevenDayRemaining} left` : undefined)}
       </div>
 
       <div class="detail-list">
@@ -522,10 +530,15 @@ function buildHtml(
 </html>`;
 }
 
-function metricTile(label: string, value: string, qualifier: string): string {
+function metricTile(label: string, value: string, qualifier: string, meta?: string): string {
+    const metaHtml = meta
+        ? `<div class="metric-meta">${escapeHtml(meta)}</div>`
+        : '';
+
     return `<div class="metric">
       <div class="metric-label">${escapeHtml(label)} ${escapeHtml(qualifier)}</div>
       <div class="metric-value">${formatMetricValue(value)}</div>
+      ${metaHtml}
     </div>`;
 }
 
@@ -554,6 +567,14 @@ function progressBar(percent: number, label: string): string {
     return `<div class="detail-meta" role="img" aria-label="${escapeHtml(label)} ${clamped}%">
       <div class="bar"><div class="bar-fill" style="width: ${clamped}%"></div></div>
     </div>`;
+}
+
+function rateLimitMeta(percent: number, label: string, remaining: string | undefined): string {
+    const reset = remaining
+        ? `<div class="detail-meta muted">Resets in ${escapeHtml(remaining)}</div>`
+        : '';
+
+    return `${reset}${progressBar(percent, label)}`;
 }
 
 function escapeHtml(str: string): string {

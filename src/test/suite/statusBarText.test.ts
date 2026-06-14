@@ -35,6 +35,18 @@ suite('statusBarText - buildStatusBarText()', () => {
         assert.ok(!text.includes('Codex'));
     });
 
+    test('formats 5-hour rate-limit time remaining in full mode', () => {
+        const text = buildStatusBarText(
+            summary({
+                primaryUsedPercent: 42,
+                primaryResetsAt: new Date(Date.now() + 2 * 3_600_000),
+            }),
+            baseSettings
+        );
+
+        assert.strictEqual(text, '$(codex-local-meter) 42% 5h · 2 h left');
+    });
+
     test('rounds fractional rate-limit percentages to whole numbers', () => {
         const text = buildStatusBarText(
             summary({ primaryUsedPercent: 2.55 }),

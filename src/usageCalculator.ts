@@ -16,6 +16,10 @@ export interface UsageSummary {
     primaryUsedPercent?: number;
     /** Most-recent 7-day rate-limit used % from the Codex API. */
     secondaryUsedPercent?: number;
+    /** Most-recent 5-hour rate-limit reset time from the Codex API. */
+    primaryResetsAt?: Date;
+    /** Most-recent 7-day rate-limit reset time from the Codex API. */
+    secondaryResetsAt?: Date;
 }
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
@@ -53,6 +57,8 @@ export function calculate(
     let latestRateLimitTs = 0;
     let latestPrimaryUsedPercent: number | undefined;
     let latestSecondaryUsedPercent: number | undefined;
+    let latestPrimaryResetsAt: Date | undefined;
+    let latestSecondaryResetsAt: Date | undefined;
 
     for (const event of events) {
         const eventMs = event.timestamp.getTime();
@@ -72,7 +78,10 @@ export function calculate(
 
         // Track most-recent rate-limit state (authoritative values from the Codex API)
         if (eventMs >= fiveHourCutoff
-            && (event.primaryUsedPercent !== undefined || event.secondaryUsedPercent !== undefined)
+            && (event.primaryUsedPercent !== undefined
+                || event.secondaryUsedPercent !== undefined
+                || event.primaryResetsAt !== undefined
+                || event.secondaryResetsAt !== undefined)
             && eventMs >= latestRateLimitTs) {
             latestRateLimitTs = eventMs;
             if (event.primaryUsedPercent !== undefined) {
@@ -80,6 +89,12 @@ export function calculate(
             }
             if (event.secondaryUsedPercent !== undefined) {
                 latestSecondaryUsedPercent = event.secondaryUsedPercent;
+            }
+            if (event.primaryResetsAt !== undefined) {
+                latestPrimaryResetsAt = event.primaryResetsAt;
+            }
+            if (event.secondaryResetsAt !== undefined) {
+                latestSecondaryResetsAt = event.secondaryResetsAt;
             }
         }
 
@@ -108,6 +123,8 @@ export function calculate(
         parseErrors,
         primaryUsedPercent: latestPrimaryUsedPercent,
         secondaryUsedPercent: latestSecondaryUsedPercent,
+        primaryResetsAt: latestPrimaryResetsAt,
+        secondaryResetsAt: latestSecondaryResetsAt,
     };
 
     if (hasTokens) {
@@ -171,4 +188,31 @@ export function formatRelativeTime(date: Date | undefined): string {
     }
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} d ago`;
+}
+
+/**
+ * Returns a compact future duration string, e.g. "25 min", "2 h", "1.5 d".
+ */
+export function formatRelativeFuture(date: Date | undefined): string | undefined {
+    if (!date) {
+        return undefined;
+    }
+
+    const diffMs = date.getTime() - Date.now();
+    if (diffMs <= 0) {
+        return 'now';
+    }
+
+    const diffMin = Math.ceil(diffMs / 60_000);
+    if (diffMin < 60) {
+        return `${diffMin} min`;
+    }
+
+    const diffHours = diffMs / 3_600_000;
+    if (diffHours < 24) {
+        return `${Math.ceil(diffHours)} h`;
+    }
+
+    const diffDays = Math.round((diffHours / 24) * 10) / 10;
+    return `${diffDays.toFixed(diffDays % 1 === 0 ? 0 : 1)} d`;
 }

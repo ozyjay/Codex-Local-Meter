@@ -62,6 +62,89 @@ function Build-MarketplaceIcon {
     }
 }
 
+function Get-PackageIdentity {
+    $packageJsonPath = Join-Path $repoRoot 'package.json'
+    $packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
+
+    return [pscustomobject]@{
+        Publisher = [string]$packageJson.publisher
+        Name = [string]$packageJson.name
+        Version = [string]$packageJson.version
+    }
+}
+
+function Get-MarketplaceVersion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ItemName
+    )
+
+    $uri = 'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery'
+    $body = @{
+        filters = @(
+            @{
+                criteria = @(
+                    @{
+                        filterType = 7
+                        value = $ItemName
+                    }
+                )
+            }
+        )
+        flags = 914
+    } | ConvertTo-Json -Depth 8
+
+    $response = Invoke-RestMethod `
+        -Method Post `
+        -Uri $uri `
+        -ContentType 'application/json' `
+        -Headers @{ Accept = 'application/json;api-version=7.2-preview.1' } `
+        -Body $body
+
+    $extension = $response.results[0].extensions[0]
+    if ($null -eq $extension -or $null -eq $extension.versions -or $extension.versions.Count -eq 0) {
+        throw "Marketplace version not found for $ItemName."
+    }
+
+    return [string]$extension.versions[0].version
+}
+
+function Get-NextVersion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BaseVersion,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('patch', 'minor', 'major')]
+        [string]$Bump
+    )
+
+    $parts = $BaseVersion.Split('.')
+    if ($parts.Count -ne 3) {
+        throw "Cannot bump non-semver version: $BaseVersion"
+    }
+
+    $major = [int]$parts[0]
+    $minor = [int]$parts[1]
+    $patch = [int]$parts[2]
+
+    switch ($Bump) {
+        'major' {
+            $major += 1
+            $minor = 0
+            $patch = 0
+        }
+        'minor' {
+            $minor += 1
+            $patch = 0
+        }
+        'patch' {
+            $patch += 1
+        }
+    }
+
+    return "$major.$minor.$patch"
+}
+
 try {
     Write-Host 'Codex Local Meter VSIX rebuild'
     Write-Host "Repository: $repoRoot"
@@ -74,8 +157,16 @@ try {
     }
 
     if ($VersionBump -ne 'none') {
-        Write-Host "Bumping package version: $VersionBump"
-        npm version $VersionBump --no-git-tag-version
+        $identity = Get-PackageIdentity
+        $itemName = "$($identity.Publisher).$($identity.Name)"
+
+        Write-Host "Checking Marketplace version for $itemName..."
+        $marketplaceVersion = Get-MarketplaceVersion -ItemName $itemName
+        Write-Host "Marketplace version: $marketplaceVersion"
+
+        $nextVersion = Get-NextVersion -BaseVersion $marketplaceVersion -Bump $VersionBump
+        Write-Host "Bumping package version: $marketplaceVersion -> $nextVersion ($VersionBump)"
+        npm version $nextVersion --no-git-tag-version
         Write-Host ''
     }
 
