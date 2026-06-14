@@ -1,12 +1,17 @@
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
+
+const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
 suite('Extension — activation', () => {
 
     test('extension is present and activates', async () => {
-        // Extension ID must match publisher.name in package.json
-        const ext = vscode.extensions.getExtension('codex-local-meter.codex-local-meter');
-        assert.ok(ext, 'Extension not found — check publisher/name in package.json');
+        const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+        const extensionId = `${packageJson.publisher}.${packageJson.name}`;
+        const ext = vscode.extensions.getExtension(extensionId);
+        assert.ok(ext, `Extension not found: ${extensionId}`);
 
         await ext!.activate();
         assert.strictEqual(ext!.isActive, true, 'Extension did not become active');

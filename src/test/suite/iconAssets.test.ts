@@ -41,12 +41,39 @@ suite('icon assets', () => {
             'rebuild script should compute the next version from the Marketplace version'
         );
         assert.ok(
-            rebuildScript.includes('npm version $nextVersion --no-git-tag-version'),
+            rebuildScript.includes("Invoke-CheckedCommand npm @('version', $nextVersion, '--no-git-tag-version')"),
             'rebuild script should set the exact computed version, not bump from local package.json'
         );
         assert.ok(
             !rebuildScript.includes('npm version $VersionBump --no-git-tag-version'),
             'rebuild script should not bump directly from the local package.json version'
+        );
+        assert.ok(
+            rebuildScript.includes('$identity.Version -eq $nextVersion'),
+            'rebuild script should skip npm version when local package.json already has the computed version'
+        );
+        assert.ok(
+            rebuildScript.includes('Invoke-CheckedCommand'),
+            'rebuild script should check external command exit codes'
+        );
+    });
+
+    test('package scripts use PowerShell Core for cross-platform packaging', () => {
+        const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+        const scripts = packageJson.scripts as Record<string, string>;
+
+        for (const name of ['package:vsix', 'package:patch', 'package:minor', 'package:major']) {
+            assert.ok(scripts[name].startsWith('pwsh '), `${name} should run with pwsh`);
+            assert.ok(!scripts[name].startsWith('powershell '), `${name} should not require Windows PowerShell`);
+        }
+    });
+
+    test('maintainer docs are excluded from packaged extension', () => {
+        const vscodeIgnore = fs.readFileSync(path.join(repoRoot, '.vscodeignore'), 'utf8');
+
+        assert.ok(
+            vscodeIgnore.split(/\r?\n/).includes('DEVELOPMENT.md'),
+            'DEVELOPMENT.md should stay out of the Marketplace VSIX'
         );
     });
 });

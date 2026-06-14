@@ -8,6 +8,7 @@ out/icon-font/**
 out/vsix-check/**
 node_modules/**
 AGENTS.md
+DEVELOPMENT.md
 .gitignore
 .eslintrc.json
 tsconfig.json

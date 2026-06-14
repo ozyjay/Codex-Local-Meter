@@ -10,6 +10,8 @@ Install dependencies:
 npm install
 ```
 
+Packaging scripts use PowerShell Core (`pwsh`). On macOS or Linux, install PowerShell Core before running the package commands.
+
 ## Common Commands
 
 | Script | What it does | When to use it |
@@ -68,10 +70,10 @@ These scripts query the VS Code Marketplace for the current published version, c
 You can also call the packaging script directly when you need options:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -Install
-powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -SkipLint
-powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -SkipUnitTests
-powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -Install
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -SkipLint
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -SkipUnitTests
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch
 ```
 
 Use the skip flags only for local iteration. Release packages should run lint and unit tests.

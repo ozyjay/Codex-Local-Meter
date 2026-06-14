@@ -31,10 +31,7 @@ function Build-IconFont {
     New-Item -ItemType Directory -Force -Path $generatedSource, $generatedOutput | Out-Null
     Copy-Item -LiteralPath $iconSource -Destination (Join-Path $generatedSource 'codex-local-meter.svg')
 
-    npx svgtofont -s $generatedSource -o $generatedOutput -f codex-local-meter
-    if ($LASTEXITCODE -ne 0) {
-        throw "Icon font generation failed with exit code $LASTEXITCODE."
-    }
+    Invoke-CheckedCommand npx @('svgtofont', '-s', $generatedSource, '-o', $generatedOutput, '-f', 'codex-local-meter')
 
     $generatedIconFont = Join-Path $generatedOutput 'codex-local-meter.woff'
     if (-not (Test-Path -LiteralPath $generatedIconFont)) {
@@ -52,10 +49,7 @@ function Build-MarketplaceIcon {
         throw "Marketplace icon source not found: $iconSource"
     }
 
-    npx --no-install @resvg/resvg-js-cli $iconSource $iconPng
-    if ($LASTEXITCODE -ne 0) {
-        throw "Marketplace icon generation failed with exit code $LASTEXITCODE."
-    }
+    Invoke-CheckedCommand npx @('--no-install', '@resvg/resvg-js-cli', $iconSource, $iconPng)
 
     if (-not (Test-Path -LiteralPath $iconPng)) {
         throw "Marketplace icon generation completed but no PNG was found: $iconPng"
@@ -70,6 +64,19 @@ function Get-PackageIdentity {
         Publisher = [string]$packageJson.publisher
         Name = [string]$packageJson.name
         Version = [string]$packageJson.version
+    }
+}
+
+function Invoke-CheckedCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [string[]]$Arguments = @()
+    )
+
+    & $FilePath @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$FilePath failed with exit code $LASTEXITCODE."
     }
 }
 
@@ -152,7 +159,7 @@ try {
 
     if ($Install) {
         Write-Host 'Installing npm dependencies...'
-        npm install
+        Invoke-CheckedCommand npm @('install')
         Write-Host ''
     }
 
@@ -165,8 +172,12 @@ try {
         Write-Host "Marketplace version: $marketplaceVersion"
 
         $nextVersion = Get-NextVersion -BaseVersion $marketplaceVersion -Bump $VersionBump
-        Write-Host "Bumping package version: $marketplaceVersion -> $nextVersion ($VersionBump)"
-        npm version $nextVersion --no-git-tag-version
+        if ($identity.Version -eq $nextVersion) {
+            Write-Host "Local package version is already $nextVersion; skipping npm version."
+        } else {
+            Write-Host "Bumping package version: $marketplaceVersion -> $nextVersion ($VersionBump)"
+            Invoke-CheckedCommand npm @('version', $nextVersion, '--no-git-tag-version')
+        }
         Write-Host ''
     }
 
@@ -179,23 +190,23 @@ try {
     Write-Host ''
 
     Write-Host 'Compiling TypeScript...'
-    npm run compile
+    Invoke-CheckedCommand npm @('run', 'compile')
     Write-Host ''
 
     if (-not $SkipLint) {
         Write-Host 'Running lint...'
-        npm run lint
+        Invoke-CheckedCommand npm @('run', 'lint')
         Write-Host ''
     }
 
     if (-not $SkipUnitTests) {
         Write-Host 'Running unit tests...'
-        npm run unit-test
+        Invoke-CheckedCommand npm @('run', 'unit-test')
         Write-Host ''
     }
 
     Write-Host 'Packaging VSIX...'
-    npx vsce package
+    Invoke-CheckedCommand npx @('vsce', 'package')
     Write-Host ''
 
     $package = Get-ChildItem -Path $repoRoot -Filter '*.vsix' |

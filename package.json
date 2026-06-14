@@ -126,10 +126,10 @@
     "unit-test": "mocha out/test/suite/usageCalculator.test.js out/test/suite/codexReader.test.js out/test/suite/statusBarText.test.js out/test/suite/statusBarColors.test.js out/test/suite/iconAssets.test.js out/test/suite/refreshScheduler.test.js out/test/suite/runTests.test.js --timeout 10000 --ui tdd",
     "test": "node ./out/test/runTests.js",
     "lint": "eslint src --ext ts",
-    "package:vsix": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1",
-    "package:patch": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch",
-    "package:minor": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump minor",
-    "package:major": "powershell -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump major"
+    "package:vsix": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1",
+    "package:patch": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch",
+    "package:minor": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump minor",
+    "package:major": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump major"
   },
   "devDependencies": {
     "@resvg/resvg-js-cli": "^2.6.2-beta.1",
@@ -139,7 +139,7 @@
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
     "@vscode/test-electron": "^2.3.8",
-    "@vscode/vsce": "^3.9.1",
+    "@vscode/vsce": "^3.9.2",
     "eslint": "^8.56.0",
     "mocha": "^11.3.0",
     "svgtofont": "^6.5.2",
