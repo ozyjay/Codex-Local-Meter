@@ -3,7 +3,7 @@ import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
 import { formatPercent, formatRelativeFuture, formatTokens } from './usageCalculator';
 import { buildStatusBarText } from './statusBarText';
-import { resolveStatusBarBackgroundToken, resolveStatusBarSeverity } from './statusBarColors';
+import { resolveStatusBarBackgroundToken, resolveStatusBarForegroundToken } from './statusBarColors';
 
 export class StatusBarManager implements vscode.Disposable {
     private readonly item: vscode.StatusBarItem;
@@ -190,19 +190,14 @@ function usagePercent(summary: UsageSummary): number | undefined {
 }
 
 function resolveColor(pct: number | undefined, settings: Settings): vscode.ThemeColor | undefined {
-    const severity = resolveStatusBarSeverity(pct, settings);
-    if (severity === 'danger') {
-        return new vscode.ThemeColor('statusBarItem.errorForeground');
-    }
-    if (severity === 'warning') {
-        return new vscode.ThemeColor('statusBarItem.warningForeground');
-    }
-    return undefined;
+    const token = resolveStatusBarForegroundToken(pct, settings);
+    return token === undefined ? undefined : new vscode.ThemeColor(token);
 }
 
 function resolveBackground(
     pct: number | undefined,
     settings: Settings
 ): vscode.ThemeColor | undefined {
-    return resolveStatusBarBackgroundToken(pct, settings);
+    const token = resolveStatusBarBackgroundToken(pct, settings);
+    return token === undefined ? undefined : new vscode.ThemeColor(token);
 }

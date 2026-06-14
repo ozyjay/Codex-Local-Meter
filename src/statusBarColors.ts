@@ -1,6 +1,8 @@
 import { Settings } from './settingsManager';
 
 export type StatusBarSeverity = 'warning' | 'danger';
+export type StatusBarForegroundToken = 'statusBarItem.warningForeground' | 'statusBarItem.errorForeground';
+export type StatusBarBackgroundToken = 'statusBarItem.warningBackground' | 'statusBarItem.errorBackground';
 
 export function resolveStatusBarSeverity(
     pct: number | undefined,
@@ -19,8 +21,29 @@ export function resolveStatusBarSeverity(
 }
 
 export function resolveStatusBarBackgroundToken(
-    _pct: number | undefined,
-    _settings: Settings
-): undefined {
+    pct: number | undefined,
+    settings: Settings
+): StatusBarBackgroundToken | undefined {
+    const severity = resolveStatusBarSeverity(pct, settings);
+    if (severity === 'danger') {
+        return 'statusBarItem.errorBackground';
+    }
+    if (severity === 'warning') {
+        return 'statusBarItem.warningBackground';
+    }
+    return undefined;
+}
+
+export function resolveStatusBarForegroundToken(
+    pct: number | undefined,
+    settings: Settings
+): StatusBarForegroundToken | undefined {
+    const severity = resolveStatusBarSeverity(pct, settings);
+    if (severity === 'danger') {
+        return 'statusBarItem.errorForeground';
+    }
+    if (severity === 'warning') {
+        return 'statusBarItem.warningForeground';
+    }
     return undefined;
 }

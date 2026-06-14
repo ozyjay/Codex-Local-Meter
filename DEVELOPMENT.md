@@ -108,13 +108,22 @@ Publish to the VS Code Marketplace:
 
 2. Authenticate `vsce`.
 
-   For local publishing with a Personal Access Token, run:
+   For local publishing with a Personal Access Token, create the token under the CrunchyCodes Azure DevOps organization:
+
+   1. Open <https://dev.azure.com/crunchycodes/>.
+   2. Use the profile menu to open **Personal access tokens**.
+   3. Create a new token for the `crunchycodes` organization.
+   4. Choose **Custom defined** scopes.
+   5. Enable **Marketplace** -> **Manage**.
+   6. Copy the token immediately; Azure DevOps will not show it again.
+
+   Then log `vsce` in to the Marketplace publisher:
 
    ```powershell
    npx vsce login CrunchyCodes
    ```
 
-   Use a token that has the Azure DevOps Marketplace **Manage** scope. Do not commit or store the token in this repository. Microsoft's current publishing docs note that global Azure DevOps PATs are retired on December 1, 2026; for automated publishing, prefer Microsoft Entra ID with `vsce publish --azure-credential`.
+   Paste the PAT when prompted. Do not commit or store the token in this repository. Microsoft's current publishing docs note that global Azure DevOps PATs are retired on December 1, 2026; for automated publishing, prefer Microsoft Entra ID with `vsce publish --azure-credential`.
 
 3. Publish the generated VSIX:
 
