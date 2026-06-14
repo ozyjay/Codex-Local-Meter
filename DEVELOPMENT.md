@@ -32,6 +32,20 @@ npm run unit-test
 npm test
 ```
 
+`npm test` launches a VS Code Electron test instance. If it aborts with `SIGABRT` under a restricted shell or sandbox, rerun it in a normal terminal.
+
+Keep `@vscode/vsce` current before publishing. Check the local version with:
+
+```powershell
+npx vsce --version
+```
+
+Update it when the packaging command warns about a newer release:
+
+```powershell
+npm install --save-dev @vscode/vsce@latest
+```
+
 ## Image Assets
 
 The `images/` directory contains both hand-authored source files and generated outputs.
@@ -65,7 +79,9 @@ Version-bump packaging scripts:
 | `npm run package:minor` | New backward-compatible features, for example `0.1.1` -> `0.2.0`. |
 | `npm run package:major` | Breaking changes, for example `0.1.1` -> `1.0.0`. |
 
-These scripts query the VS Code Marketplace for the current published version, compute the next version from that value, update `package.json` and `package-lock.json` with `npm version <next-version> --no-git-tag-version`, then run the same compile, lint, unit-test, and package flow. If the Marketplace version cannot be found, the script stops before changing the local version.
+These scripts query the VS Code Marketplace for the current published version, compute the next version from that value, update `package.json` and `package-lock.json` with `npm version <next-version> --no-git-tag-version`, then run the same compile, lint, unit-test, and package flow. If the local package version already matches the computed next version, the script skips `npm version` and continues packaging. If the Marketplace version cannot be found, the script stops before changing the local version.
+
+The package script checks native command exit codes explicitly. If `npm`, `npx`, `svgtofont`, `resvg`, lint, tests, or `vsce package` fail, the script stops instead of continuing with a stale or partial package.
 
 You can also call the packaging script directly when you need options:
 
@@ -130,4 +146,4 @@ Official publishing reference: <https://code.visualstudio.com/api/working-with-e
 
 ## Packaging Notes
 
-The extension manifest points at `out/extension.js`, so compile before packaging. The packaged extension details page is rendered from `README.md`. If VS Code still shows "No README available", rebuild the `.vsix` and reinstall the newly packaged file.
+The extension manifest points at `out/extension.js`, so compile before packaging. The packaged extension details page is rendered from `README.md`; maintainer-only notes in `DEVELOPMENT.md` are excluded by `.vscodeignore`. If VS Code still shows "No README available", rebuild the `.vsix` and reinstall the newly packaged file.
