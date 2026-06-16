@@ -43,6 +43,10 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
         assert.ok(svg.includes('Clears in 2 d 23 h'));
         assert.ok(svg.includes('Warning'));
         assert.ok(svg.includes('5 min ago'));
+        assert.ok(svg.includes('fill="#111315"'));
+        assert.ok(svg.includes('Based on the latest local Codex rate-'));
+        assert.ok(svg.includes('limit event.'));
+        assert.ok(!svg.includes('>Based on the latest local Codex rate-limit event.<'));
         assert.ok(!svg.includes('Refreshing'));
         assert.ok(!svg.includes('Diagnostics'));
     });
