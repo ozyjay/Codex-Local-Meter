@@ -31,7 +31,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 42% 5h');
+        assert.strictEqual(text, '$(codex-local-meter) 42%');
         assert.ok(!text.includes('Codex'));
     });
 
@@ -44,7 +44,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 42% 5h · 2 h left');
+        assert.strictEqual(text, '$(codex-local-meter) 42%');
     });
 
     test('rounds fractional rate-limit percentages to whole numbers', () => {
@@ -53,7 +53,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 3% 5h');
+        assert.strictEqual(text, '$(codex-local-meter) 3%');
     });
 
     test('formats token usage without repeating the product name', () => {

@@ -123,7 +123,7 @@ Publish to the VS Code Marketplace:
    npx vsce login CrunchyCodes
    ```
 
-   Paste the PAT when prompted. Do not commit or store the token in this repository. Microsoft's current publishing docs note that global Azure DevOps PATs are retired on December 1, 2026; for automated publishing, prefer Microsoft Entra ID with `vsce publish --azure-credential`.
+   If you have recently logged in, there is no need to do this. Paste the PAT when prompted. Do not commit or store the token in this repository. Microsoft's current publishing docs note that global Azure DevOps PATs are retired on December 1, 2026; for automated publishing, prefer Microsoft Entra ID with `vsce publish --azure-credential`.
 
 3. Publish the generated VSIX:
 
