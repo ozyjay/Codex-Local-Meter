@@ -129,7 +129,11 @@
     "package:vsix": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1",
     "package:patch": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch",
     "package:minor": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump minor",
-    "package:major": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump major"
+    "package:major": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump major",
+    "publish:vsix": "./scripts/PublishVsix.sh",
+    "publish:patch": "./scripts/PublishVsix.sh patch",
+    "publish:minor": "./scripts/PublishVsix.sh minor",
+    "publish:major": "./scripts/PublishVsix.sh major"
   },
   "devDependencies": {
     "@resvg/resvg-js-cli": "^2.6.2-beta.1",

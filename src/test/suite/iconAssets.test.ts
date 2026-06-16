@@ -68,6 +68,25 @@ suite('icon assets', () => {
         }
     });
 
+    test('publish script wraps packaging and Marketplace publish safely', () => {
+        const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+        const scripts = packageJson.scripts as Record<string, string>;
+        const publishScriptPath = path.join(repoRoot, 'scripts', 'PublishVsix.sh');
+        const publishScript = fs.readFileSync(publishScriptPath, 'utf8');
+        const mode = fs.statSync(publishScriptPath).mode;
+
+        assert.strictEqual(scripts['publish:vsix'], './scripts/PublishVsix.sh');
+        assert.strictEqual(scripts['publish:patch'], './scripts/PublishVsix.sh patch');
+        assert.ok((mode & 0o111) !== 0, 'publish script should be executable from a terminal');
+        assert.ok(publishScript.startsWith('#!/usr/bin/env bash'), 'publish script should be a terminal-friendly bash script');
+        assert.ok(publishScript.includes('set -euo pipefail'), 'publish script should stop on errors');
+        assert.ok(publishScript.includes('npm run package:"$BUMP"'), 'publish script should reuse existing version-bump packaging');
+        assert.ok(publishScript.includes('npm run package:vsix'), 'publish script should support publishing without a version bump');
+        assert.ok(publishScript.includes('npx vsce publish --packagePath "$PACKAGE_PATH"'), 'publish script should publish the generated VSIX');
+        assert.ok(publishScript.includes('npx vsce show "$ITEM_NAME"'), 'publish script should verify the Marketplace item after publishing');
+        assert.ok(!publishScript.includes('VSCE_PAT='), 'publish script should not store or hard-code publishing tokens');
+    });
+
     test('maintainer docs are excluded from packaged extension', () => {
         const vscodeIgnore = fs.readFileSync(path.join(repoRoot, '.vscodeignore'), 'utf8');
 
