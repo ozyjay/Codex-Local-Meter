@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -73,11 +74,14 @@ suite('icon assets', () => {
         const scripts = packageJson.scripts as Record<string, string>;
         const publishScriptPath = path.join(repoRoot, 'scripts', 'PublishVsix.sh');
         const publishScript = fs.readFileSync(publishScriptPath, 'utf8');
-        const mode = fs.statSync(publishScriptPath).mode;
+        const gitMode = execFileSync('git', ['ls-files', '--stage', 'scripts/PublishVsix.sh'], {
+            cwd: repoRoot,
+            encoding: 'utf8',
+        }).trim().split(/\s+/)[0];
 
         assert.strictEqual(scripts['publish:vsix'], './scripts/PublishVsix.sh');
         assert.strictEqual(scripts['publish:patch'], './scripts/PublishVsix.sh patch');
-        assert.ok((mode & 0o111) !== 0, 'publish script should be executable from a terminal');
+        assert.strictEqual(gitMode, '100755', 'publish script should be tracked as executable for Unix/macOS terminals');
         assert.ok(publishScript.startsWith('#!/usr/bin/env bash'), 'publish script should be a terminal-friendly bash script');
         assert.ok(publishScript.includes('set -euo pipefail'), 'publish script should stop on errors');
         assert.ok(publishScript.includes('npm run package:"$BUMP"'), 'publish script should reuse existing version-bump packaging');
