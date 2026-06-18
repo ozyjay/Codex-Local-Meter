@@ -54,7 +54,8 @@ export function calculate(
     let lastActivity: Date | undefined;
     const sessionIds = new Set<string>();
     const modelSet = new Set<string>();
-    let latestRateLimitTs = 0;
+    let latestPrimaryRateLimitTs = 0;
+    let latestSecondaryRateLimitTs = 0;
     let latestPrimaryUsedPercent: number | undefined;
     let latestSecondaryUsedPercent: number | undefined;
     let latestPrimaryResetsAt: Date | undefined;
@@ -76,22 +77,25 @@ export function calculate(
             hasTokens = true;
         }
 
-        // Track most-recent rate-limit state (authoritative values from the Codex API)
-        if (eventMs >= fiveHourCutoff
-            && (event.primaryUsedPercent !== undefined
-                || event.secondaryUsedPercent !== undefined
-                || event.primaryResetsAt !== undefined
-                || event.secondaryResetsAt !== undefined)
-            && eventMs >= latestRateLimitTs) {
-            latestRateLimitTs = eventMs;
+        // Track most-recent local rate-limit state while its reset window is still relevant.
+        if (isRateLimitFresh(eventMs, fiveHourCutoff, event.primaryResetsAt)
+            && (event.primaryUsedPercent !== undefined || event.primaryResetsAt !== undefined)
+            && eventMs >= latestPrimaryRateLimitTs) {
+            latestPrimaryRateLimitTs = eventMs;
             if (event.primaryUsedPercent !== undefined) {
                 latestPrimaryUsedPercent = event.primaryUsedPercent;
             }
-            if (event.secondaryUsedPercent !== undefined) {
-                latestSecondaryUsedPercent = event.secondaryUsedPercent;
-            }
             if (event.primaryResetsAt !== undefined) {
                 latestPrimaryResetsAt = event.primaryResetsAt;
+            }
+        }
+
+        if (isRateLimitFresh(eventMs, sevenDayCutoff, event.secondaryResetsAt)
+            && (event.secondaryUsedPercent !== undefined || event.secondaryResetsAt !== undefined)
+            && eventMs >= latestSecondaryRateLimitTs) {
+            latestSecondaryRateLimitTs = eventMs;
+            if (event.secondaryUsedPercent !== undefined) {
+                latestSecondaryUsedPercent = event.secondaryUsedPercent;
             }
             if (event.secondaryResetsAt !== undefined) {
                 latestSecondaryResetsAt = event.secondaryResetsAt;
@@ -136,6 +140,13 @@ export function calculate(
     }
 
     return summary;
+}
+
+function isRateLimitFresh(eventMs: number, cutoffMs: number, resetsAt: Date | undefined): boolean {
+    if (resetsAt !== undefined) {
+        return resetsAt.getTime() > Date.now();
+    }
+    return eventMs >= cutoffMs;
 }
 
 /**

@@ -223,6 +223,37 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.sevenDayTokens, 33);
         assert.strictEqual(s.primaryResetsAt, undefined);
     });
+
+    test('secondaryUsedPercent: keeps older seven-day rate-limit values while still in the weekly window', () => {
+        const events: RawEvent[] = [
+            makeEvent({
+                minsAgo: 4 * 24 * 60,
+                inputTokens: 20,
+                outputTokens: 10,
+                secondaryUsedPercent: 41,
+                secondaryResetsAt: new Date(Date.now() + 2 * 86_400_000),
+                sessionId: 'weekly',
+            }),
+        ];
+        const s = calculate(events, '/fake', []);
+        assert.strictEqual(s.primaryUsedPercent, undefined);
+        assert.strictEqual(s.secondaryUsedPercent, 41);
+        assert.ok(s.secondaryResetsAt, 'secondary reset timestamp should be preserved');
+    });
+
+    test('secondaryUsedPercent: ignores seven-day rate-limit values after reset expiry', () => {
+        const events: RawEvent[] = [
+            makeEvent({
+                minsAgo: 4 * 24 * 60,
+                secondaryUsedPercent: 41,
+                secondaryResetsAt: new Date(Date.now() - 60_000),
+                sessionId: 'expired',
+            }),
+        ];
+        const s = calculate(events, '/fake', []);
+        assert.strictEqual(s.secondaryUsedPercent, undefined);
+        assert.strictEqual(s.secondaryResetsAt, undefined);
+    });
 });
 
 // ---------------------------------------------------------------------------

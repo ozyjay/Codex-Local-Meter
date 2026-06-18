@@ -47,8 +47,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         refreshTimer = setInterval(() => { void requestRefresh(); }, refreshIntervalSeconds * 1000);
     }
 
-    // Dispose the timer on deactivation
+    let startupRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+    function scheduleStartupFollowUpRefresh(): void {
+        startupRefreshTimer = setTimeout(() => { void requestRefresh(); }, 10_000);
+    }
+
+    // Dispose timers on deactivation
     context.subscriptions.push({ dispose: () => { if (refreshTimer !== undefined) { clearInterval(refreshTimer); } } });
+    context.subscriptions.push({ dispose: () => { if (startupRefreshTimer !== undefined) { clearTimeout(startupRefreshTimer); } } });
 
     // File-system watcher — triggers an immediate refresh when session files are written
     let fsWatcher: vscode.FileSystemWatcher | undefined;
@@ -117,10 +124,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         })
     );
 
-    // Initial load
+    startWatcher();
+    // Initial load, followed by one short retry in case Codex writes session metadata during startup.
     await requestRefresh();
     startTimer();
-    startWatcher();
+    scheduleStartupFollowUpRefresh();
 }
 
 export function deactivate(): void {
