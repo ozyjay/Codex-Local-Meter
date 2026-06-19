@@ -1,10 +1,22 @@
 param(
     [ValidateSet('none', 'patch', 'minor', 'major')]
-    [string]$VersionBump = 'none'
+    [string]$VersionBump = 'none',
+
+    [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+function Show-Usage {
+    Write-Host 'Usage: pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 [-VersionBump none|patch|minor|major]'
+    Write-Host ''
+    Write-Host 'Builds a release VSIX using the existing packaging flow, publishes the newest'
+    Write-Host 'generated package to the VS Code Marketplace, then verifies the Marketplace item.'
+    Write-Host ''
+    Write-Host 'Authentication is handled by vsce. Run `npx vsce login CrunchyCodes` first, or'
+    Write-Host 'set VSCE_PAT in your shell before invoking this script.'
+}
 
 function Invoke-CheckedCommand {
     param(
@@ -16,9 +28,20 @@ function Invoke-CheckedCommand {
     )
 
     & $FilePath @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code $LASTEXITCODE: $FilePath $($Arguments -join ' ')"
+    $exitCode = if (Test-Path variable:global:LASTEXITCODE) {
+        $global:LASTEXITCODE
+    } else {
+        0
     }
+
+    if ($exitCode -ne 0) {
+        throw "Command failed with exit code $exitCode`: $FilePath $($Arguments -join ' ')"
+    }
+}
+
+if ($Help) {
+    Show-Usage
+    exit 0
 }
 
 $scriptDir = Split-Path -Parent $PSCommandPath
