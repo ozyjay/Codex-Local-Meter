@@ -41,7 +41,7 @@ export function calculate(
     }
 
     const now = Date.now();
-    const fiveHourCutoff = now - FIVE_HOURS_MS;
+    const fiveHourCutoff = resolveFiveHourCutoff(events, now);
     const sevenDayCutoff = now - SEVEN_DAYS_MS;
 
     let fiveHourInputTokens = 0;
@@ -78,7 +78,7 @@ export function calculate(
         }
 
         // Track most-recent local rate-limit state while its reset window is still relevant.
-        if (isRateLimitFresh(eventMs, fiveHourCutoff, event.primaryResetsAt)
+        if (isRateLimitFresh(eventMs, now, fiveHourCutoff, event.primaryResetsAt)
             && (event.primaryUsedPercent !== undefined || event.primaryResetsAt !== undefined)
             && eventMs >= latestPrimaryRateLimitTs) {
             latestPrimaryRateLimitTs = eventMs;
@@ -90,7 +90,7 @@ export function calculate(
             }
         }
 
-        if (isRateLimitFresh(eventMs, sevenDayCutoff, event.secondaryResetsAt)
+        if (isRateLimitFresh(eventMs, now, sevenDayCutoff, event.secondaryResetsAt)
             && (event.secondaryUsedPercent !== undefined || event.secondaryResetsAt !== undefined)
             && eventMs >= latestSecondaryRateLimitTs) {
             latestSecondaryRateLimitTs = eventMs;
@@ -142,9 +142,37 @@ export function calculate(
     return summary;
 }
 
-function isRateLimitFresh(eventMs: number, cutoffMs: number, resetsAt: Date | undefined): boolean {
+function resolveFiveHourCutoff(events: RawEvent[], now: number): number {
+    const rollingCutoff = now - FIVE_HOURS_MS;
+    let latestPrimaryResetMs: number | undefined;
+
+    for (const event of events) {
+        const resetMs = event.primaryResetsAt?.getTime();
+        if (resetMs !== undefined && !isNaN(resetMs)
+            && (latestPrimaryResetMs === undefined || resetMs > latestPrimaryResetMs)) {
+            latestPrimaryResetMs = resetMs;
+        }
+    }
+
+    if (latestPrimaryResetMs === undefined) {
+        return rollingCutoff;
+    }
+
+    const blockCutoff = latestPrimaryResetMs > now
+        ? latestPrimaryResetMs - FIVE_HOURS_MS
+        : latestPrimaryResetMs;
+
+    return Math.max(rollingCutoff, blockCutoff);
+}
+
+function isRateLimitFresh(
+    eventMs: number,
+    now: number,
+    cutoffMs: number,
+    resetsAt: Date | undefined
+): boolean {
     if (resetsAt !== undefined) {
-        return resetsAt.getTime() > Date.now();
+        return resetsAt.getTime() > now;
     }
     return eventMs >= cutoffMs;
 }

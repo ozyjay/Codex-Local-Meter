@@ -1,5 +1,4 @@
 import * as assert from 'assert';
-import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -59,11 +58,20 @@ suite('icon assets', () => {
         );
     });
 
-    test('package scripts use PowerShell Core for cross-platform packaging', () => {
+    test('package scripts use PowerShell Core for cross-platform packaging and publishing', () => {
         const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
         const scripts = packageJson.scripts as Record<string, string>;
 
-        for (const name of ['package:vsix', 'package:patch', 'package:minor', 'package:major']) {
+        for (const name of [
+            'package:vsix',
+            'package:patch',
+            'package:minor',
+            'package:major',
+            'publish:vsix',
+            'publish:patch',
+            'publish:minor',
+            'publish:major',
+        ]) {
             assert.ok(scripts[name].startsWith('pwsh '), `${name} should run with pwsh`);
             assert.ok(!scripts[name].startsWith('powershell '), `${name} should not require Windows PowerShell`);
         }
@@ -72,22 +80,16 @@ suite('icon assets', () => {
     test('publish script wraps packaging and Marketplace publish safely', () => {
         const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
         const scripts = packageJson.scripts as Record<string, string>;
-        const publishScriptPath = path.join(repoRoot, 'scripts', 'PublishVsix.sh');
+        const publishScriptPath = path.join(repoRoot, 'scripts', 'PublishVsix.ps1');
         const publishScript = fs.readFileSync(publishScriptPath, 'utf8');
-        const gitMode = execFileSync('git', ['ls-files', '--stage', 'scripts/PublishVsix.sh'], {
-            cwd: repoRoot,
-            encoding: 'utf8',
-        }).trim().split(/\s+/)[0];
 
-        assert.strictEqual(scripts['publish:vsix'], './scripts/PublishVsix.sh');
-        assert.strictEqual(scripts['publish:patch'], './scripts/PublishVsix.sh patch');
-        assert.strictEqual(gitMode, '100755', 'publish script should be tracked as executable for Unix/macOS terminals');
-        assert.ok(publishScript.startsWith('#!/usr/bin/env bash'), 'publish script should be a terminal-friendly bash script');
-        assert.ok(publishScript.includes('set -euo pipefail'), 'publish script should stop on errors');
-        assert.ok(publishScript.includes('npm run package:"$BUMP"'), 'publish script should reuse existing version-bump packaging');
-        assert.ok(publishScript.includes('npm run package:vsix'), 'publish script should support publishing without a version bump');
-        assert.ok(publishScript.includes('npx vsce publish --packagePath "$PACKAGE_PATH"'), 'publish script should publish the generated VSIX');
-        assert.ok(publishScript.includes('npx vsce show "$ITEM_NAME"'), 'publish script should verify the Marketplace item after publishing');
+        assert.ok(scripts['publish:vsix'].includes('./scripts/PublishVsix.ps1'));
+        assert.ok(scripts['publish:patch'].includes('-VersionBump patch'));
+        assert.ok(publishScript.includes("Set-StrictMode -Version Latest"), 'publish script should fail on unsafe PowerShell usage');
+        assert.ok(publishScript.includes("Invoke-CheckedCommand npm @('run', \"package:$VersionBump\")"), 'publish script should reuse existing version-bump packaging');
+        assert.ok(publishScript.includes("Invoke-CheckedCommand npm @('run', 'package:vsix')"), 'publish script should support publishing without a version bump');
+        assert.ok(publishScript.includes("Invoke-CheckedCommand npx @('vsce', 'publish', '--packagePath', $packagePath.FullName)"), 'publish script should publish the generated VSIX');
+        assert.ok(publishScript.includes("Invoke-CheckedCommand npx @('vsce', 'show', $itemName)"), 'publish script should verify the Marketplace item after publishing');
         assert.ok(!publishScript.includes('VSCE_PAT='), 'publish script should not store or hard-code publishing tokens');
     });
 

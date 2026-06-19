@@ -76,6 +76,52 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.sevenDayTokens, 1150);   // both events
     });
 
+    test('5-hour window starts at the latest known primary reset after rollover', () => {
+        const resetOneMinuteAgo = new Date(Date.now() - 60_000);
+        const events: RawEvent[] = [
+            makeEvent({
+                minsAgo: 2,
+                inputTokens: 12_500_000,
+                outputTokens: 100_000,
+                primaryUsedPercent: 82,
+                primaryResetsAt: resetOneMinuteAgo,
+                sessionId: 'previous-block',
+            }),
+        ];
+
+        const s = calculate(events, '/fake', []);
+
+        assert.strictEqual(s.primaryUsedPercent, undefined, 'expired rate-limit percent should not be reused');
+        assert.strictEqual(s.fiveHourTokens, 0, 'pre-reset tokens should not appear in the new block');
+        assert.strictEqual(s.sevenDayTokens, 12_600_000, 'weekly usage still includes the older block');
+    });
+
+    test('5-hour window includes usage after the latest known primary reset', () => {
+        const resetTwoMinutesAgo = new Date(Date.now() - 2 * 60_000);
+        const events: RawEvent[] = [
+            makeEvent({
+                minsAgo: 3,
+                inputTokens: 500,
+                outputTokens: 50,
+                primaryUsedPercent: 70,
+                primaryResetsAt: resetTwoMinutesAgo,
+                sessionId: 'previous-block',
+            }),
+            makeEvent({
+                minsAgo: 1,
+                inputTokens: 20,
+                outputTokens: 5,
+                sessionId: 'current-block',
+            }),
+        ];
+
+        const s = calculate(events, '/fake', []);
+
+        assert.strictEqual(s.primaryUsedPercent, undefined);
+        assert.strictEqual(s.fiveHourTokens, 25);
+        assert.strictEqual(s.sevenDayTokens, 575);
+    });
+
     test('7-day window excludes events older than 7 days', () => {
         const eightDaysAgo = 8 * 24 * 60; // minutes
         const events: RawEvent[] = [

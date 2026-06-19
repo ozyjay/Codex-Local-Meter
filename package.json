@@ -2,7 +2,7 @@
   "name": "codex-local-meter",
   "displayName": "Codex Local Meter",
   "description": "Local-only Codex usage estimates in the VS Code status bar from your local ~/.codex session files.",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "publisher": "CrunchyCodes",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -130,10 +130,10 @@
     "package:patch": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump patch",
     "package:minor": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump minor",
     "package:major": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/RebuildVsix.ps1 -VersionBump major",
-    "publish:vsix": "./scripts/PublishVsix.sh",
-    "publish:patch": "./scripts/PublishVsix.sh patch",
-    "publish:minor": "./scripts/PublishVsix.sh minor",
-    "publish:major": "./scripts/PublishVsix.sh major"
+    "publish:vsix": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1",
+    "publish:patch": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 -VersionBump patch",
+    "publish:minor": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 -VersionBump minor",
+    "publish:major": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 -VersionBump major"
   },
   "devDependencies": {
     "@resvg/resvg-js-cli": "^2.6.2-beta.1",

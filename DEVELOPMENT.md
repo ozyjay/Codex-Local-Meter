@@ -10,7 +10,7 @@ Install dependencies:
 npm install
 ```
 
-Packaging scripts use PowerShell Core (`pwsh`). On macOS or Linux, install PowerShell Core before running the package commands.
+Packaging and publishing scripts use PowerShell Core (`pwsh`). On macOS or Linux, install PowerShell Core before running those commands.
 
 ## Common Commands
 
@@ -118,7 +118,7 @@ Publish to the VS Code Marketplace from a terminal:
 
 2. Run the publish wrapper with the right version bump:
 
-   ```bash
+   ```powershell
    npm run publish:patch
    ```
 
