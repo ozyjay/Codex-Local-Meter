@@ -6,7 +6,9 @@ import { getSettings } from './settingsManager';
 import { StatusBarManager } from './statusBar';
 import { DetailsPanel } from './detailsPanel';
 import { showDiagnostics } from './diagnostics';
-import { createRefreshScheduler } from './refreshScheduler';
+import { createRefreshDebouncer, createRefreshScheduler } from './refreshScheduler';
+
+const FILE_WATCH_REFRESH_DELAY_MS = 1_000;
 
 export { UsageSummary };
 
@@ -19,7 +21,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Core refresh: read events → calculate summary → update status bar + open panel if visible
     async function refresh(): Promise<UsageSummary> {
         const settings = getSettings();
-        statusBar.setRefreshing();
         const { events, parseErrors } = await readEvents(settings.codexPath);
         const summary = calculate(events, settings.codexPath, parseErrors);
         statusBar.update(summary, settings);
@@ -35,6 +36,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     const refreshScheduler = createRefreshScheduler(refresh);
     const requestRefresh = (): Promise<UsageSummary> => refreshScheduler.requestRefresh();
+    const watchedFileRefresh = createRefreshDebouncer(
+        () => { void requestRefresh(); },
+        FILE_WATCH_REFRESH_DELAY_MS
+    );
 
     // Auto-refresh timer — recreated whenever settings change
     let refreshTimer: ReturnType<typeof setInterval> | undefined;
@@ -66,13 +71,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const sessionsUri = vscode.Uri.file(path.join(codexPath, 'sessions'));
         const pattern = new vscode.RelativePattern(sessionsUri, '**/*.jsonl');
         fsWatcher = vscode.workspace.createFileSystemWatcher(pattern);
-        const onActivity = () => { void requestRefresh(); };
+        const onActivity = () => { watchedFileRefresh.requestRefresh(); };
         fsWatcher.onDidChange(onActivity);
         fsWatcher.onDidCreate(onActivity);
     }
 
     // Dispose the watcher on deactivation
     context.subscriptions.push({ dispose: () => { fsWatcher?.dispose(); } });
+    context.subscriptions.push(watchedFileRefresh);
 
     // Restart timer and watcher if any setting changes
     context.subscriptions.push(
@@ -93,6 +99,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }),
 
         vscode.commands.registerCommand('codexLocalMeter.refreshNow', async () => {
+            statusBar.setRefreshing();
             await requestRefresh();
         }),
 
