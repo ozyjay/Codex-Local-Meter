@@ -8,7 +8,7 @@ export interface TooltipOptions {
 
 interface Ring {
     label: string;
-    percent: number | undefined;
+    percent: number;
     resetsAt: Date | undefined;
     colour: string;
 }
@@ -20,16 +20,18 @@ export function buildTooltipDashboardDataUri(
     summary: UsageSummary,
     options: TooltipOptions
 ): string {
-    const rings: Ring[] = [
-        {
+    const rings: Ring[] = [];
+
+    if (summary.fiveHourUsedPercent !== undefined) {
+        rings.push({
             label: '5-hour limit',
             percent: summary.fiveHourUsedPercent,
             resetsAt: summary.fiveHourResetsAt,
             colour: '#f1f1ef',
-        },
-    ];
+        });
+    }
 
-    if (options.showWeeklyUsage !== false) {
+    if (options.showWeeklyUsage !== false && summary.sevenDayUsedPercent !== undefined) {
         rings.push({
             label: '7-day limit',
             percent: summary.sevenDayUsedPercent,
@@ -41,20 +43,25 @@ export function buildTooltipDashboardDataUri(
     const panelStartY = 62;
     const panelHeight = 104;
     const panelGap = 10;
-    const footerY = panelStartY + rings.length * (panelHeight + panelGap) + 4;
+    const contentHeight = rings.length > 0
+        ? rings.length * (panelHeight + panelGap)
+        : 76;
+    const footerY = panelStartY + contentHeight + 4;
     const height = footerY + 66;
     const state = usageState(rings, options);
     const pathText = `Folder ${truncateMiddle(summary.codexPath, 44)}`;
     const activityText = formatRelativeTime(summary.lastActivity);
-    const panels = rings
-        .map((ring, index) => panel(22, panelStartY + index * (panelHeight + panelGap), ring))
-        .join('');
+    const content = rings.length > 0
+        ? rings
+            .map((ring, index) => panel(22, panelStartY + index * (panelHeight + panelGap), ring))
+            .join('')
+        : emptyState(22, panelStartY);
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="${height}" viewBox="0 0 420 ${height}" role="img" aria-label="Codex Local Meter rate-limit dashboard">
   <rect x="4" y="4" width="412" height="${height - 8}" rx="18" fill="#111315" stroke="#6b6b6c" stroke-width="1"/>
   <text x="22" y="31" fill="#f4f4f2" font-family="${fontFamily}" font-size="13" font-weight="800">Codex Local Meter</text>
   <text x="22" y="48" fill="#a4a6a8" font-family="${fontFamily}" font-size="11">Local only · No session content leaves your device</text>
-  ${panels}
+  ${content}
   ${footer(footerY, state, activityText, pathText)}
 </svg>`;
 
@@ -67,9 +74,7 @@ function panel(x: number, y: number, ring: Ring): string {
     const resetText = ring.resetsAt === undefined
         ? 'Reset time not found'
         : `Resets in ${formatReset(ring.resetsAt)}`;
-    const statusText = ring.percent === undefined
-        ? 'Usage not found'
-        : `${formatPercent(ring.percent)}% used`;
+    const statusText = `${formatPercent(ring.percent)}% used`;
     const infoX = x + 112;
 
     return `<g>
@@ -84,11 +89,21 @@ function panel(x: number, y: number, ring: Ring): string {
   </g>`;
 }
 
+function emptyState(x: number, y: number): string {
+    return `<g>
+    <rect x="${x}" y="${y}" width="376" height="76" rx="8" fill="#1b1d1f"/>
+    <text x="${x + 18}" y="${y + 31}" fill="#f4f4f2" font-family="${fontFamily}" font-size="13" font-weight="800">Rate-limit data not found</text>
+    <text x="${x + 18}" y="${y + 52}" fill="#9a9d9f" font-family="${fontFamily}" font-size="11">Open Details to view local activity estimates.</text>
+  </g>`;
+}
+
 function footer(y: number, state: string, activityText: string, pathText: string): string {
     const stateColour = state === 'Danger'
         ? '#d83b01'
         : state === 'Warning'
         ? '#ff8a1d'
+        : state === 'Unavailable'
+        ? '#9a9d9f'
         : '#7d916d';
 
     return `<g>
@@ -100,7 +115,11 @@ function footer(y: number, state: string, activityText: string, pathText: string
 }
 
 function usageState(rings: Ring[], thresholds: TooltipOptions): string {
-    const highest = Math.max(...rings.map(ring => ring.percent ?? -1));
+    if (rings.length === 0) {
+        return 'Unavailable';
+    }
+
+    const highest = Math.max(...rings.map(ring => ring.percent));
     if (highest >= thresholds.dangerThresholdPercent) {
         return 'Danger';
     }
@@ -110,15 +129,12 @@ function usageState(rings: Ring[], thresholds: TooltipOptions): string {
     return 'Normal';
 }
 
-function clampPercent(percent: number | undefined): number {
-    if (percent === undefined) {
-        return 0;
-    }
+function clampPercent(percent: number): number {
     return Math.max(0, Math.min(100, Math.round(percent)));
 }
 
-function percentLabel(percent: number | undefined): string {
-    return percent === undefined ? '--' : `${formatPercent(percent)}%`;
+function percentLabel(percent: number): string {
+    return `${formatPercent(percent)}%`;
 }
 
 function formatReset(date: Date): string {

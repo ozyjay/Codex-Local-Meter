@@ -61,10 +61,29 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
             }
         ));
 
-        assert.ok(svg.includes('5-hour limit'));
-        assert.ok(svg.includes('Usage not found'));
+        assert.ok(!svg.includes('5-hour limit'));
+        assert.ok(!svg.includes('Usage not found'));
+        assert.ok(svg.includes('7-day limit'));
         assert.ok(svg.includes('95% used'));
         assert.ok(svg.includes('>Danger<'));
+        assert.ok(svg.includes('height="246"'));
+    });
+
+    test('renders one compact empty state when no rate-limit windows are available', () => {
+        const svg = decodeDataUri(buildTooltipDashboardDataUri(
+            summary({ fiveHourTokens: 12_000, sevenDayTokens: 48_000 }),
+            {
+                warningThresholdPercent: 70,
+                dangerThresholdPercent: 90,
+            }
+        ));
+
+        assert.ok(!svg.includes('5-hour limit'));
+        assert.ok(!svg.includes('7-day limit'));
+        assert.ok(svg.includes('Rate-limit data not found'));
+        assert.ok(svg.includes('Open Details to view local activity estimates.'));
+        assert.ok(svg.includes('>Unavailable<'));
+        assert.ok(svg.includes('height="208"'));
     });
 
     test('hides the weekly row and ignores it for state when weekly usage is disabled', () => {
