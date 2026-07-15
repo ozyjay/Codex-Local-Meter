@@ -76,35 +76,35 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.sevenDayTokens, 1150);   // both events
     });
 
-    test('5-hour window starts at the latest known primary reset after rollover', () => {
+    test('5-hour window starts at the latest known five-hour reset after rollover', () => {
         const resetOneMinuteAgo = new Date(Date.now() - 60_000);
         const events: RawEvent[] = [
             makeEvent({
                 minsAgo: 2,
                 inputTokens: 12_500_000,
                 outputTokens: 100_000,
-                primaryUsedPercent: 82,
-                primaryResetsAt: resetOneMinuteAgo,
+                fiveHourUsedPercent: 82,
+                fiveHourResetsAt: resetOneMinuteAgo,
                 sessionId: 'previous-block',
             }),
         ];
 
         const s = calculate(events, '/fake', []);
 
-        assert.strictEqual(s.primaryUsedPercent, undefined, 'expired rate-limit percent should not be reused');
+        assert.strictEqual(s.fiveHourUsedPercent, undefined, 'expired rate-limit percent should not be reused');
         assert.strictEqual(s.fiveHourTokens, 0, 'pre-reset tokens should not appear in the new block');
         assert.strictEqual(s.sevenDayTokens, 12_600_000, 'weekly usage still includes the older block');
     });
 
-    test('5-hour window includes usage after the latest known primary reset', () => {
+    test('5-hour window includes usage after the latest known five-hour reset', () => {
         const resetTwoMinutesAgo = new Date(Date.now() - 2 * 60_000);
         const events: RawEvent[] = [
             makeEvent({
                 minsAgo: 3,
                 inputTokens: 500,
                 outputTokens: 50,
-                primaryUsedPercent: 70,
-                primaryResetsAt: resetTwoMinutesAgo,
+                fiveHourUsedPercent: 70,
+                fiveHourResetsAt: resetTwoMinutesAgo,
                 sessionId: 'previous-block',
             }),
             makeEvent({
@@ -117,9 +117,28 @@ suite('usageCalculator — calculate()', () => {
 
         const s = calculate(events, '/fake', []);
 
-        assert.strictEqual(s.primaryUsedPercent, undefined);
+        assert.strictEqual(s.fiveHourUsedPercent, undefined);
         assert.strictEqual(s.fiveHourTokens, 25);
         assert.strictEqual(s.sevenDayTokens, 575);
+    });
+
+    test('seven-day reset metadata does not change the rolling five-hour token cutoff', () => {
+        const events: RawEvent[] = [
+            makeEvent({
+                minsAgo: 60,
+                inputTokens: 500,
+                outputTokens: 50,
+                sevenDayUsedPercent: 18,
+                sevenDayResetsAt: new Date(Date.now() + 6 * 86_400_000),
+                sessionId: 'weekly-only',
+            }),
+        ];
+
+        const s = calculate(events, '/fake', []);
+
+        assert.strictEqual(s.fiveHourTokens, 550);
+        assert.strictEqual(s.fiveHourUsedPercent, undefined);
+        assert.strictEqual(s.sevenDayUsedPercent, 18);
     });
 
     test('7-day window excludes events older than 7 days', () => {
@@ -189,7 +208,7 @@ suite('usageCalculator — calculate()', () => {
         assert.strictEqual(s.fiveHourTokens, 150);
     });
 
-    test('primaryUsedPercent: most-recent rate-limit % is tracked across events', () => {
+    test('most-recent rate-limit percentages are tracked across events', () => {
         const now = Date.now();
         const olderPrimaryReset = new Date(now + 60 * 60_000);
         const newerPrimaryReset = new Date(now + 120 * 60_000);
@@ -198,107 +217,107 @@ suite('usageCalculator — calculate()', () => {
             {
                 sessionId: 's1',
                 timestamp: new Date(now - 10_000), // older
-                primaryUsedPercent: 2.5,
-                secondaryUsedPercent: 0.8,
-                primaryResetsAt: olderPrimaryReset,
+                fiveHourUsedPercent: 2.5,
+                sevenDayUsedPercent: 0.8,
+                fiveHourResetsAt: olderPrimaryReset,
             },
             {
                 sessionId: 's1',
                 timestamp: new Date(now - 5_000), // more recent
                 inputTokens: 1000,
                 outputTokens: 50,
-                primaryUsedPercent: 3.0,
-                secondaryUsedPercent: 1.0,
-                primaryResetsAt: newerPrimaryReset,
-                secondaryResetsAt: newerSecondaryReset,
+                fiveHourUsedPercent: 3.0,
+                sevenDayUsedPercent: 1.0,
+                fiveHourResetsAt: newerPrimaryReset,
+                sevenDayResetsAt: newerSecondaryReset,
             },
         ];
         const s = calculate(events, '/fake', []);
-        assert.strictEqual(s.primaryUsedPercent, 3.0, 'most recent primary % wins');
-        assert.strictEqual(s.secondaryUsedPercent, 1.0, 'most recent secondary % wins');
-        assert.strictEqual(s.primaryResetsAt?.getTime(), newerPrimaryReset.getTime(), 'most recent primary reset wins');
-        assert.strictEqual(s.secondaryResetsAt?.getTime(), newerSecondaryReset.getTime(), 'most recent secondary reset wins');
+        assert.strictEqual(s.fiveHourUsedPercent, 3.0, 'most recent five-hour % wins');
+        assert.strictEqual(s.sevenDayUsedPercent, 1.0, 'most recent seven-day % wins');
+        assert.strictEqual(s.fiveHourResetsAt?.getTime(), newerPrimaryReset.getTime(), 'most recent five-hour reset wins');
+        assert.strictEqual(s.sevenDayResetsAt?.getTime(), newerSecondaryReset.getTime(), 'most recent seven-day reset wins');
     });
 
-    test('primaryUsedPercent: later event wins when rate-limit timestamps are equal', () => {
+    test('later event wins when rate-limit timestamps are equal', () => {
         const timestamp = new Date();
         const events: RawEvent[] = [
             {
                 sessionId: 's1',
                 timestamp,
-                primaryUsedPercent: 2.0,
-                secondaryUsedPercent: 1.0,
+                fiveHourUsedPercent: 2.0,
+                sevenDayUsedPercent: 1.0,
             },
             {
                 sessionId: 's1',
                 timestamp,
                 inputTokens: 1000,
                 outputTokens: 50,
-                primaryUsedPercent: 6.0,
-                secondaryUsedPercent: 2.0,
+                fiveHourUsedPercent: 6.0,
+                sevenDayUsedPercent: 2.0,
             },
         ];
         const s = calculate(events, '/fake', []);
-        assert.strictEqual(s.primaryUsedPercent, 6.0, 'later same-timestamp primary % wins');
-        assert.strictEqual(s.secondaryUsedPercent, 2.0, 'later same-timestamp secondary % wins');
+        assert.strictEqual(s.fiveHourUsedPercent, 6.0, 'later same-timestamp five-hour % wins');
+        assert.strictEqual(s.sevenDayUsedPercent, 2.0, 'later same-timestamp seven-day % wins');
     });
 
-    test('primaryUsedPercent: undefined when no events carry rate-limit data', () => {
+    test('rate-limit percentages are undefined when no events carry rate-limit data', () => {
         const events: RawEvent[] = [
             makeEvent({ minsAgo: 5, inputTokens: 100, outputTokens: 50, sessionId: 's1' }),
         ];
         const s = calculate(events, '/fake', []);
-        assert.strictEqual(s.primaryUsedPercent, undefined);
-        assert.strictEqual(s.secondaryUsedPercent, undefined);
+        assert.strictEqual(s.fiveHourUsedPercent, undefined);
+        assert.strictEqual(s.sevenDayUsedPercent, undefined);
     });
 
-    test('primaryUsedPercent: ignores stale five-hour rate-limit values', () => {
+    test('ignores stale five-hour rate-limit values', () => {
         const events: RawEvent[] = [
             makeEvent({
                 minsAgo: 301,
                 inputTokens: 20,
                 outputTokens: 10,
-                primaryUsedPercent: 82,
+                fiveHourUsedPercent: 82,
                 sessionId: 'old',
             }),
             makeEvent({ minsAgo: 1, inputTokens: 1, outputTokens: 2, sessionId: 'recent' }),
         ];
         const s = calculate(events, '/fake', []);
-        assert.strictEqual(s.primaryUsedPercent, undefined);
+        assert.strictEqual(s.fiveHourUsedPercent, undefined);
         assert.strictEqual(s.fiveHourTokens, 3);
         assert.strictEqual(s.sevenDayTokens, 33);
-        assert.strictEqual(s.primaryResetsAt, undefined);
+        assert.strictEqual(s.fiveHourResetsAt, undefined);
     });
 
-    test('secondaryUsedPercent: keeps older seven-day rate-limit values while still in the weekly window', () => {
+    test('keeps older seven-day rate-limit values while still in the weekly window', () => {
         const events: RawEvent[] = [
             makeEvent({
                 minsAgo: 4 * 24 * 60,
                 inputTokens: 20,
                 outputTokens: 10,
-                secondaryUsedPercent: 41,
-                secondaryResetsAt: new Date(Date.now() + 2 * 86_400_000),
+                sevenDayUsedPercent: 41,
+                sevenDayResetsAt: new Date(Date.now() + 2 * 86_400_000),
                 sessionId: 'weekly',
             }),
         ];
         const s = calculate(events, '/fake', []);
-        assert.strictEqual(s.primaryUsedPercent, undefined);
-        assert.strictEqual(s.secondaryUsedPercent, 41);
-        assert.ok(s.secondaryResetsAt, 'secondary reset timestamp should be preserved');
+        assert.strictEqual(s.fiveHourUsedPercent, undefined);
+        assert.strictEqual(s.sevenDayUsedPercent, 41);
+        assert.ok(s.sevenDayResetsAt, 'seven-day reset timestamp should be preserved');
     });
 
-    test('secondaryUsedPercent: ignores seven-day rate-limit values after reset expiry', () => {
+    test('ignores seven-day rate-limit values after reset expiry', () => {
         const events: RawEvent[] = [
             makeEvent({
                 minsAgo: 4 * 24 * 60,
-                secondaryUsedPercent: 41,
-                secondaryResetsAt: new Date(Date.now() - 60_000),
+                sevenDayUsedPercent: 41,
+                sevenDayResetsAt: new Date(Date.now() - 60_000),
                 sessionId: 'expired',
             }),
         ];
         const s = calculate(events, '/fake', []);
-        assert.strictEqual(s.secondaryUsedPercent, undefined);
-        assert.strictEqual(s.secondaryResetsAt, undefined);
+        assert.strictEqual(s.sevenDayUsedPercent, undefined);
+        assert.strictEqual(s.sevenDayResetsAt, undefined);
     });
 });
 

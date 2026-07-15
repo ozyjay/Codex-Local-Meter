@@ -65,8 +65,8 @@ function buildHtml(
     summary: UsageSummary,
     _extensionUri: vscode.Uri
 ): string {
-    const hasRateLimitData = summary.primaryUsedPercent !== undefined
-        || summary.secondaryUsedPercent !== undefined;
+    const hasRateLimitData = summary.fiveHourUsedPercent !== undefined
+        || summary.sevenDayUsedPercent !== undefined;
     const hasTokenCounts = !summary.isEstimated;
 
     const dataState = hasRateLimitData
@@ -75,26 +75,26 @@ function buildHtml(
         ? 'Local token counts'
         : 'Message-count estimate';
 
-    const fiveHourPrimary = summary.primaryUsedPercent !== undefined
-        ? `${formatPercent(summary.primaryUsedPercent)}% used`
+    const fiveHourPrimary = summary.fiveHourUsedPercent !== undefined
+        ? `${formatPercent(summary.fiveHourUsedPercent)}% used`
         : summary.isEstimated
         ? `~${summary.fiveHourMessages ?? 0} messages`
         : `${formatTokens(summary.fiveHourTokens) ?? '0'} tokens`;
 
-    const sevenDayPrimary = summary.secondaryUsedPercent !== undefined
-        ? `${formatPercent(summary.secondaryUsedPercent)}% used`
+    const sevenDayPrimary = summary.sevenDayUsedPercent !== undefined
+        ? `${formatPercent(summary.sevenDayUsedPercent)}% used`
         : summary.isEstimated
         ? `~${summary.sevenDayMessages ?? 0} messages`
         : `${formatTokens(summary.sevenDayTokens) ?? '0'} tokens`;
 
-    const fiveHourRemaining = formatRelativeFuture(summary.primaryResetsAt);
-    const sevenDayRemaining = formatRelativeFuture(summary.secondaryResetsAt);
+    const fiveHourRemaining = formatRelativeFuture(summary.fiveHourResetsAt);
+    const sevenDayRemaining = formatRelativeFuture(summary.sevenDayResetsAt);
 
-    const fiveHourRateRow = summary.primaryUsedPercent !== undefined
+    const fiveHourRateRow = summary.fiveHourUsedPercent !== undefined
         ? detailRow(
             '5-hour rate limit',
-            `<strong>${escapeHtml(formatPercent(summary.primaryUsedPercent))}%</strong> used`,
-            rateLimitMeta(summary.primaryUsedPercent, '5-hour rate-limit usage', fiveHourRemaining)
+            `<strong>${escapeHtml(formatPercent(summary.fiveHourUsedPercent))}%</strong> used`,
+            rateLimitMeta(summary.fiveHourUsedPercent, '5-hour rate-limit usage', fiveHourRemaining)
         )
         : detailRow(
             summary.isEstimated ? '5-hour activity' : '5-hour tokens',
@@ -102,11 +102,11 @@ function buildHtml(
             summary.isEstimated ? 'message-count estimate' : 'local token count'
         );
 
-    const sevenDayRateRow = summary.secondaryUsedPercent !== undefined
+    const sevenDayRateRow = summary.sevenDayUsedPercent !== undefined
         ? detailRow(
             '7-day rate limit',
-            `<strong>${escapeHtml(formatPercent(summary.secondaryUsedPercent))}%</strong> used`,
-            rateLimitMeta(summary.secondaryUsedPercent, '7-day rate-limit usage', sevenDayRemaining)
+            `<strong>${escapeHtml(formatPercent(summary.sevenDayUsedPercent))}%</strong> used`,
+            rateLimitMeta(summary.sevenDayUsedPercent, '7-day rate-limit usage', sevenDayRemaining)
         )
         : detailRow(
             summary.isEstimated ? '7-day activity' : '7-day tokens',
@@ -484,8 +484,8 @@ function buildHtml(
       </div>
 
       <div class="meter-grid">
-        ${metricTile('5-hour', fiveHourPrimary, summary.primaryUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', fiveHourRemaining ? `${fiveHourRemaining} left` : undefined)}
-        ${metricTile('7-day', sevenDayPrimary, summary.secondaryUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', sevenDayRemaining ? `${sevenDayRemaining} left` : undefined)}
+        ${metricTile('5-hour', fiveHourPrimary, summary.fiveHourUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', fiveHourRemaining ? `${fiveHourRemaining} left` : undefined)}
+        ${metricTile('7-day', sevenDayPrimary, summary.sevenDayUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', sevenDayRemaining ? `${sevenDayRemaining} left` : undefined)}
       </div>
 
       <div class="detail-list">

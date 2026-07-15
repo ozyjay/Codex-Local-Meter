@@ -13,13 +13,13 @@ export interface UsageSummary {
     modelNames: string[];
     parseErrors: string[];
     /** Most-recent 5-hour rate-limit used % from the Codex API. Takes priority over computed ratios. */
-    primaryUsedPercent?: number;
+    fiveHourUsedPercent?: number;
     /** Most-recent 7-day rate-limit used % from the Codex API. */
-    secondaryUsedPercent?: number;
+    sevenDayUsedPercent?: number;
     /** Most-recent 5-hour rate-limit reset time from the Codex API. */
-    primaryResetsAt?: Date;
+    fiveHourResetsAt?: Date;
     /** Most-recent 7-day rate-limit reset time from the Codex API. */
-    secondaryResetsAt?: Date;
+    sevenDayResetsAt?: Date;
 }
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
@@ -54,12 +54,12 @@ export function calculate(
     let lastActivity: Date | undefined;
     const sessionIds = new Set<string>();
     const modelSet = new Set<string>();
-    let latestPrimaryRateLimitTs = 0;
-    let latestSecondaryRateLimitTs = 0;
-    let latestPrimaryUsedPercent: number | undefined;
-    let latestSecondaryUsedPercent: number | undefined;
-    let latestPrimaryResetsAt: Date | undefined;
-    let latestSecondaryResetsAt: Date | undefined;
+    let latestFiveHourRateLimitTs = 0;
+    let latestSevenDayRateLimitTs = 0;
+    let latestFiveHourUsedPercent: number | undefined;
+    let latestSevenDayUsedPercent: number | undefined;
+    let latestFiveHourResetsAt: Date | undefined;
+    let latestSevenDayResetsAt: Date | undefined;
 
     for (const event of events) {
         const eventMs = event.timestamp.getTime();
@@ -78,27 +78,27 @@ export function calculate(
         }
 
         // Track most-recent local rate-limit state while its reset window is still relevant.
-        if (isRateLimitFresh(eventMs, now, fiveHourCutoff, event.primaryResetsAt)
-            && (event.primaryUsedPercent !== undefined || event.primaryResetsAt !== undefined)
-            && eventMs >= latestPrimaryRateLimitTs) {
-            latestPrimaryRateLimitTs = eventMs;
-            if (event.primaryUsedPercent !== undefined) {
-                latestPrimaryUsedPercent = event.primaryUsedPercent;
+        if (isRateLimitFresh(eventMs, now, fiveHourCutoff, event.fiveHourResetsAt)
+            && (event.fiveHourUsedPercent !== undefined || event.fiveHourResetsAt !== undefined)
+            && eventMs >= latestFiveHourRateLimitTs) {
+            latestFiveHourRateLimitTs = eventMs;
+            if (event.fiveHourUsedPercent !== undefined) {
+                latestFiveHourUsedPercent = event.fiveHourUsedPercent;
             }
-            if (event.primaryResetsAt !== undefined) {
-                latestPrimaryResetsAt = event.primaryResetsAt;
+            if (event.fiveHourResetsAt !== undefined) {
+                latestFiveHourResetsAt = event.fiveHourResetsAt;
             }
         }
 
-        if (isRateLimitFresh(eventMs, now, sevenDayCutoff, event.secondaryResetsAt)
-            && (event.secondaryUsedPercent !== undefined || event.secondaryResetsAt !== undefined)
-            && eventMs >= latestSecondaryRateLimitTs) {
-            latestSecondaryRateLimitTs = eventMs;
-            if (event.secondaryUsedPercent !== undefined) {
-                latestSecondaryUsedPercent = event.secondaryUsedPercent;
+        if (isRateLimitFresh(eventMs, now, sevenDayCutoff, event.sevenDayResetsAt)
+            && (event.sevenDayUsedPercent !== undefined || event.sevenDayResetsAt !== undefined)
+            && eventMs >= latestSevenDayRateLimitTs) {
+            latestSevenDayRateLimitTs = eventMs;
+            if (event.sevenDayUsedPercent !== undefined) {
+                latestSevenDayUsedPercent = event.sevenDayUsedPercent;
             }
-            if (event.secondaryResetsAt !== undefined) {
-                latestSecondaryResetsAt = event.secondaryResetsAt;
+            if (event.sevenDayResetsAt !== undefined) {
+                latestSevenDayResetsAt = event.sevenDayResetsAt;
             }
         }
 
@@ -125,10 +125,10 @@ export function calculate(
         sessionCount: sessionIds.size,
         modelNames: Array.from(modelSet).sort(),
         parseErrors,
-        primaryUsedPercent: latestPrimaryUsedPercent,
-        secondaryUsedPercent: latestSecondaryUsedPercent,
-        primaryResetsAt: latestPrimaryResetsAt,
-        secondaryResetsAt: latestSecondaryResetsAt,
+        fiveHourUsedPercent: latestFiveHourUsedPercent,
+        sevenDayUsedPercent: latestSevenDayUsedPercent,
+        fiveHourResetsAt: latestFiveHourResetsAt,
+        sevenDayResetsAt: latestSevenDayResetsAt,
     };
 
     if (hasTokens) {
@@ -144,23 +144,23 @@ export function calculate(
 
 function resolveFiveHourCutoff(events: RawEvent[], now: number): number {
     const rollingCutoff = now - FIVE_HOURS_MS;
-    let latestPrimaryResetMs: number | undefined;
+    let latestFiveHourResetMs: number | undefined;
 
     for (const event of events) {
-        const resetMs = event.primaryResetsAt?.getTime();
+        const resetMs = event.fiveHourResetsAt?.getTime();
         if (resetMs !== undefined && !isNaN(resetMs)
-            && (latestPrimaryResetMs === undefined || resetMs > latestPrimaryResetMs)) {
-            latestPrimaryResetMs = resetMs;
+            && (latestFiveHourResetMs === undefined || resetMs > latestFiveHourResetMs)) {
+            latestFiveHourResetMs = resetMs;
         }
     }
 
-    if (latestPrimaryResetMs === undefined) {
+    if (latestFiveHourResetMs === undefined) {
         return rollingCutoff;
     }
 
-    const blockCutoff = latestPrimaryResetMs > now
-        ? latestPrimaryResetMs - FIVE_HOURS_MS
-        : latestPrimaryResetMs;
+    const blockCutoff = latestFiveHourResetMs > now
+        ? latestFiveHourResetMs - FIVE_HOURS_MS
+        : latestFiveHourResetMs;
 
     return Math.max(rollingCutoff, blockCutoff);
 }

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { Settings } from '../../settingsManager';
-import { buildStatusBarText } from '../../statusBarText';
+import { buildStatusBarText, selectStatusBarUsagePercent } from '../../statusBarText';
 import { UsageSummary } from '../../usageCalculator';
 
 const baseSettings: Settings = {
@@ -27,7 +27,7 @@ function summary(overrides: Partial<UsageSummary>): UsageSummary {
 suite('statusBarText - buildStatusBarText()', () => {
     test('formats rate-limit usage without repeating the product name', () => {
         const text = buildStatusBarText(
-            summary({ primaryUsedPercent: 42 }),
+            summary({ fiveHourUsedPercent: 42 }),
             baseSettings
         );
 
@@ -38,8 +38,8 @@ suite('statusBarText - buildStatusBarText()', () => {
     test('formats 5-hour rate-limit time remaining in full mode', () => {
         const text = buildStatusBarText(
             summary({
-                primaryUsedPercent: 42,
-                primaryResetsAt: new Date(Date.now() + 2 * 3_600_000),
+                fiveHourUsedPercent: 42,
+                fiveHourResetsAt: new Date(Date.now() + 2 * 3_600_000),
             }),
             baseSettings
         );
@@ -49,11 +49,36 @@ suite('statusBarText - buildStatusBarText()', () => {
 
     test('rounds fractional rate-limit percentages to whole numbers', () => {
         const text = buildStatusBarText(
-            summary({ primaryUsedPercent: 2.55 }),
+            summary({ fiveHourUsedPercent: 2.55 }),
             baseSettings
         );
 
         assert.strictEqual(text, '$(codex-local-meter) 3%');
+    });
+
+    test('uses the weekly percentage as a labeled fallback when five-hour data is unavailable', () => {
+        const text = buildStatusBarText(
+            summary({ sevenDayUsedPercent: 18 }),
+            baseSettings
+        );
+
+        assert.strictEqual(text, '$(codex-local-meter) 18% 7d');
+    });
+
+    test('does not use the weekly fallback when weekly usage is hidden', () => {
+        const text = buildStatusBarText(
+            summary({ fiveHourTokens: 12400, sevenDayUsedPercent: 18 }),
+            { ...baseSettings, showWeeklyUsage: false }
+        );
+
+        assert.strictEqual(text, '$(codex-local-meter) 12.4k 5h');
+    });
+
+    test('selects the weekly percentage for status-bar threshold coloring', () => {
+        assert.strictEqual(
+            selectStatusBarUsagePercent(summary({ sevenDayUsedPercent: 95 }), baseSettings),
+            95
+        );
     });
 
     test('formats token usage without repeating the product name', () => {
@@ -76,11 +101,20 @@ suite('statusBarText - buildStatusBarText()', () => {
 
     test('formats compact mode with the icon and value only', () => {
         const text = buildStatusBarText(
-            summary({ primaryUsedPercent: 42.5 }),
+            summary({ fiveHourUsedPercent: 42.5 }),
             { ...baseSettings, compactMode: true }
         );
 
         assert.strictEqual(text, '$(codex-local-meter) 43%');
+    });
+
+    test('formats weekly-only compact mode without the window suffix', () => {
+        const text = buildStatusBarText(
+            summary({ sevenDayUsedPercent: 18 }),
+            { ...baseSettings, compactMode: true }
+        );
+
+        assert.strictEqual(text, '$(codex-local-meter) 18%');
     });
 
     test('formats no-data state quietly', () => {

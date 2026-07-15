@@ -235,16 +235,102 @@ suite('codexReader — readEvents()', () => {
         assert.strictEqual(tokenEvents.length, 1, 'only the event with non-null info yields tokens');
         assert.strictEqual(tokenEvents[0].inputTokens, 23091);
         assert.strictEqual(tokenEvents[0].outputTokens, 140);
-        assert.strictEqual(tokenEvents[0].primaryUsedPercent, 3.0);
-        assert.strictEqual(tokenEvents[0].secondaryUsedPercent, 1.0);
-        assert.strictEqual(tokenEvents[0].primaryResetsAt?.getTime(), 1778921770 * 1000);
-        assert.strictEqual(tokenEvents[0].secondaryResetsAt?.getTime(), 1779452078 * 1000);
+        assert.strictEqual(tokenEvents[0].fiveHourUsedPercent, 3.0);
+        assert.strictEqual(tokenEvents[0].sevenDayUsedPercent, 1.0);
+        assert.strictEqual(tokenEvents[0].fiveHourResetsAt?.getTime(), 1778921770 * 1000);
+        assert.strictEqual(tokenEvents[0].sevenDayResetsAt?.getTime(), 1779452078 * 1000);
 
-        const rateLimitEvents = result.events.filter(e => e.primaryUsedPercent !== undefined);
+        const rateLimitEvents = result.events.filter(e => e.fiveHourUsedPercent !== undefined);
         assert.strictEqual(rateLimitEvents.length, 2, 'both token_count events carry rate-limit data');
 
         const msgEvents = result.events.filter(e => e.messageCount === 1);
         assert.strictEqual(msgEvents.length, 1, 'user_message counted once');
+    });
+
+    test('Codex Desktop: classifies a single primary weekly window by duration', async () => {
+        const codexPath = path.join(tmpRoot, 'codex-desktop-weekly-only');
+        const sessionDir = path.join(codexPath, 'sessions', '2026', '07', '14');
+        fs.mkdirSync(sessionDir, { recursive: true });
+        const file = path.join(sessionDir, 'rollout-weekly.jsonl');
+
+        writeLine(file, {
+            timestamp: '2026-07-14T12:08:03.235Z',
+            type: 'event_msg',
+            payload: {
+                type: 'token_count',
+                info: null,
+                rate_limits: {
+                    primary: { used_percent: 18, window_minutes: 10080, resets_at: 1784521660 },
+                    secondary: null,
+                    plan_type: 'prolite',
+                },
+            },
+        });
+
+        const result = await readEvents(codexPath);
+        assert.strictEqual(result.events.length, 1);
+        assert.strictEqual(result.events[0].fiveHourUsedPercent, undefined);
+        assert.strictEqual(result.events[0].sevenDayUsedPercent, 18);
+        assert.strictEqual(result.events[0].sevenDayResetsAt?.getTime(), 1784521660 * 1000);
+    });
+
+    test('Codex Desktop: duration classification handles tolerance and swapped slots', async () => {
+        const codexPath = path.join(tmpRoot, 'codex-desktop-swapped-limits');
+        const sessionDir = path.join(codexPath, 'sessions', '2026', '07', '14');
+        fs.mkdirSync(sessionDir, { recursive: true });
+        const file = path.join(sessionDir, 'rollout-swapped.jsonl');
+
+        writeLine(file, {
+            timestamp: '2026-07-14T12:08:03.235Z',
+            type: 'event_msg',
+            payload: {
+                type: 'token_count',
+                rate_limits: {
+                    primary: { used_percent: 44, window_minutes: 10079, resets_at: 1784521660 },
+                    secondary: { used_percent: 7, window_minutes: 299, resets_at: 1784000000 },
+                },
+            },
+        });
+
+        const result = await readEvents(codexPath);
+        assert.strictEqual(result.events[0].fiveHourUsedPercent, 7);
+        assert.strictEqual(result.events[0].sevenDayUsedPercent, 44);
+    });
+
+    test('Codex Desktop: uses legacy dual-slot fallback but ignores unknown single windows', async () => {
+        const codexPath = path.join(tmpRoot, 'codex-desktop-legacy-limits');
+        const sessionDir = path.join(codexPath, 'sessions', '2026', '07', '14');
+        fs.mkdirSync(sessionDir, { recursive: true });
+        const file = path.join(sessionDir, 'rollout-legacy.jsonl');
+
+        writeLine(file, {
+            timestamp: '2026-07-14T12:08:03.235Z',
+            type: 'event_msg',
+            payload: {
+                type: 'token_count',
+                rate_limits: {
+                    primary: { used_percent: 5, resets_at: 1784000000 },
+                    secondary: { used_percent: 12, resets_at: 1784521660 },
+                },
+            },
+        });
+        writeLine(file, {
+            timestamp: '2026-07-14T12:09:03.235Z',
+            type: 'event_msg',
+            payload: {
+                type: 'token_count',
+                rate_limits: {
+                    primary: { used_percent: 33, window_minutes: 1440 },
+                    secondary: 'malformed',
+                },
+            },
+        });
+
+        const result = await readEvents(codexPath);
+        assert.strictEqual(result.events[0].fiveHourUsedPercent, 5);
+        assert.strictEqual(result.events[0].sevenDayUsedPercent, 12);
+        assert.strictEqual(result.events[1].fiveHourUsedPercent, undefined);
+        assert.strictEqual(result.events[1].sevenDayUsedPercent, undefined);
     });
 
     test('Codex Desktop: skips non-event_msg wrapper types', async () => {

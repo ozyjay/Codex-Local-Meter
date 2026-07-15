@@ -20,17 +20,17 @@ export function buildTooltipDashboardDataUri(
     summary: UsageSummary,
     thresholds: TooltipThresholds
 ): string {
-    const primary: Ring = {
+    const fiveHour: Ring = {
         label: '5-hour',
-        percent: summary.primaryUsedPercent,
-        resetsAt: summary.primaryResetsAt,
+        percent: summary.fiveHourUsedPercent,
+        resetsAt: summary.fiveHourResetsAt,
         colour: '#f1f1ef',
         backgroundColour: '#3a3a3a',
     };
-    const secondary: Ring = {
+    const sevenDay: Ring = {
         label: '7-day',
-        percent: summary.secondaryUsedPercent,
-        resetsAt: summary.secondaryResetsAt,
+        percent: summary.sevenDayUsedPercent,
+        resetsAt: summary.sevenDayResetsAt,
         colour: '#ff8a1d',
         backgroundColour: '#111315',
     };
@@ -47,8 +47,8 @@ export function buildTooltipDashboardDataUri(
   <rect x="4" y="4" width="412" height="492" rx="22" fill="#111315" stroke="#6b6b6c" stroke-width="1" filter="url(#shadow)"/>
   <text x="22" y="34" fill="#f4f4f2" font-family="${fontFamily}" font-size="13" font-weight="800">Codex Local Meter</text>
   <text x="22" y="52" fill="#a4a6a8" font-family="${fontFamily}" font-size="11">Local estimates only. No session content leaves your Mac.</text>
-  ${panel(22, 70, primary, true)}
-  ${panel(22, 248, secondary, false)}
+  ${panel(22, 70, fiveHour, true)}
+  ${panel(22, 248, sevenDay, false)}
   ${footer(state, activityText, pathText)}
 </svg>`;
 
@@ -109,8 +109,8 @@ function footer(state: string, activityText: string, pathText: string): string {
 
 function usageState(summary: UsageSummary, thresholds: TooltipThresholds): string {
     const highest = Math.max(
-        summary.primaryUsedPercent ?? -1,
-        summary.secondaryUsedPercent ?? -1
+        summary.fiveHourUsedPercent ?? -1,
+        summary.sevenDayUsedPercent ?? -1
     );
     if (highest >= thresholds.dangerThresholdPercent) {
         return 'Danger';

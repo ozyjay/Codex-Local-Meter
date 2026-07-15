@@ -43,8 +43,8 @@ export async function showDiagnostics(
         lines.push(`  5-hour tokens   : ${summary.fiveHourTokens ?? 0}`);
         lines.push(`  7-day tokens    : ${summary.sevenDayTokens ?? 0}`);
     }
-    lines.push(`  5-hour reset    : ${formatReset(summary.primaryResetsAt)}`);
-    lines.push(`  7-day reset     : ${formatReset(summary.secondaryResetsAt)}`);
+    lines.push(`  5-hour reset    : ${formatReset(summary.fiveHourResetsAt)}`);
+    lines.push(`  7-day reset     : ${formatReset(summary.sevenDayResetsAt)}`);
     lines.push(`  Last activity   : ${formatRelativeTime(summary.lastActivity)}`);
     lines.push(`  Models detected : ${summary.modelNames.length > 0 ? summary.modelNames.join(', ') : '(none)'}`);
     lines.push('');

@@ -77,14 +77,14 @@ All settings are under `codexLocalMeter.*`.
 | `codexPath` | `""` | Override the Codex data directory. Empty means `~/.codex`. |
 | `refreshIntervalSeconds` | `300` | How often to re-read local Codex files. Minimum 30 seconds. |
 | `showFiveHourUsage` | `true` | Show 5-hour usage in the status bar. |
-| `showWeeklyUsage` | `true` | Show 7-day usage in the tooltip. |
+| `showWeeklyUsage` | `true` | Show 7-day usage in the tooltip and use it as the status-bar fallback when 5-hour rate-limit data is unavailable. |
 | `warningThresholdPercent` | `70` | Show warning colors at or above this percentage. |
 | `dangerThresholdPercent` | `90` | Show danger colors at or above this percentage. |
 | `compactMode` | `false` | Use shorter status bar text. |
 
 ## How Usage Is Estimated
 
-Codex Local Meter scans local Codex JSONL session files and looks for usage-relevant records. When local rate-limit percentages are present, those values are shown first. When token counts are present, token totals are shown. When neither is available, the extension falls back to message counts and marks the result as an estimate.
+Codex Local Meter scans local Codex JSONL session files and looks for usage-relevant records. When local rate-limit percentages are present, those values are shown first. Codex may store a 5-hour or 7-day window under either the `primary` or `secondary` field, so the extension identifies known windows by their reported duration rather than their field name. When token counts are present, token totals are shown. When neither is available, the extension falls back to message counts and marks the result as an estimate.
 
 These numbers are best-effort local estimates. They are not official billing records, account quota records, or service-side usage statements.
 

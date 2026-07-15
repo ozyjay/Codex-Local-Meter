@@ -23,10 +23,10 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
         const now = Date.now();
         const svg = decodeDataUri(buildTooltipDashboardDataUri(
             summary({
-                primaryUsedPercent: 29,
-                secondaryUsedPercent: 78,
-                primaryResetsAt: new Date(now + 28 * 60_000),
-                secondaryResetsAt: new Date(now + (2 * 24 + 23) * 3_600_000),
+                fiveHourUsedPercent: 29,
+                sevenDayUsedPercent: 78,
+                fiveHourResetsAt: new Date(now + 28 * 60_000),
+                sevenDayResetsAt: new Date(now + (2 * 24 + 23) * 3_600_000),
                 lastActivity: new Date(now - 5 * 60_000),
             }),
             {
@@ -51,12 +51,26 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
         assert.ok(!svg.includes('Diagnostics'));
     });
 
+    test('renders weekly-only data without assigning it to the five-hour panel', () => {
+        const svg = decodeDataUri(buildTooltipDashboardDataUri(
+            summary({ sevenDayUsedPercent: 95 }),
+            {
+                warningThresholdPercent: 70,
+                dangerThresholdPercent: 90,
+            }
+        ));
+
+        assert.ok(svg.includes('5-hour usage not found'));
+        assert.ok(svg.includes('95% of 7-day rate limit'));
+        assert.ok(svg.includes('>Danger<'));
+    });
+
     test('escapes dynamic text before embedding it in SVG', () => {
         const svg = decodeDataUri(buildTooltipDashboardDataUri(
             summary({
                 codexPath: '/fake/<codex>&"sessions"',
-                primaryUsedPercent: 1,
-                secondaryUsedPercent: 2,
+                fiveHourUsedPercent: 1,
+                sevenDayUsedPercent: 2,
             }),
             {
                 warningThresholdPercent: 70,

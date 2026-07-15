@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { UsageSummary } from './usageCalculator';
 import { Settings } from './settingsManager';
-import { buildStatusBarText } from './statusBarText';
+import { buildStatusBarText, selectStatusBarUsagePercent } from './statusBarText';
 import { buildTooltipDashboardDataUri } from './statusBarTooltipArt';
 import { resolveStatusBarBackgroundToken, resolveStatusBarForegroundToken } from './statusBarColors';
 
@@ -22,7 +22,7 @@ export class StatusBarManager implements vscode.Disposable {
     update(summary: UsageSummary, settings: Settings): void {
         this.item.text = buildText(summary, settings);
         this.item.tooltip = buildTooltip(summary, settings);
-        const pct = usagePercent(summary);
+        const pct = usagePercent(summary, settings);
         this.item.color = resolveColor(pct, settings);
         this.item.backgroundColor = resolveBackground(pct, settings);
     }
@@ -76,15 +76,15 @@ function buildTooltip(summary: UsageSummary, settings: Settings): vscode.Markdow
 
 /**
  * Derives a 0–100 "usage percent" for color threshold purposes.
- * When token counts are available, uses the 5-hour window scaled to a
- * rolling peak (max seen so far in the 7-day window).
+ * Prefers the authoritative window shown in the status text. When token counts
+ * are available, the fallback uses the 5-hour window scaled to a rolling peak.
  * Falls back to message-count ratio when no tokens are present.
  * Returns undefined if there is no data to compare.
  */
-function usagePercent(summary: UsageSummary): number | undefined {
-    // Prefer the authoritative rate-limit % from the Codex API (primary = 5-hour window)
-    if (summary.primaryUsedPercent !== undefined) {
-        return summary.primaryUsedPercent;
+function usagePercent(summary: UsageSummary, settings: Settings): number | undefined {
+    const authoritativePercent = selectStatusBarUsagePercent(summary, settings);
+    if (authoritativePercent !== undefined) {
+        return authoritativePercent;
     }
 
     // Fallback: estimate from token/message ratios

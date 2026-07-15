@@ -94,7 +94,7 @@
         "codexLocalMeter.showWeeklyUsage": {
           "type": "boolean",
           "default": true,
-          "description": "Show 7-day estimated usage in the tooltip."
+          "description": "Show 7-day usage in the tooltip and use it as the status-bar fallback when 5-hour rate-limit data is unavailable."
         },
         "codexLocalMeter.warningThresholdPercent": {
           "type": "number",
