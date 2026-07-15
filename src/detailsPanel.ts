@@ -10,12 +10,12 @@ export class DetailsPanel implements vscode.Disposable {
     private lastSummary: UsageSummary | undefined;
 
     /** Opens (or reveals) the panel and renders the latest summary. */
-    show(summary: UsageSummary, extensionUri: vscode.Uri): void {
+    show(summary: UsageSummary, _extensionUri: vscode.Uri): void {
         this.lastSummary = summary;
 
         if (this.panel) {
             this.panel.reveal(vscode.ViewColumn.One);
-            this.panel.webview.html = buildHtml(this.panel.webview, summary, extensionUri);
+            this.panel.webview.html = buildDetailsHtml(summary);
             return;
         }
 
@@ -30,7 +30,7 @@ export class DetailsPanel implements vscode.Disposable {
             }
         );
 
-        this.panel.webview.html = buildHtml(this.panel.webview, summary, extensionUri);
+        this.panel.webview.html = buildDetailsHtml(summary);
 
         this.panel.onDidDispose(() => {
             this.panel = undefined;
@@ -38,10 +38,10 @@ export class DetailsPanel implements vscode.Disposable {
     }
 
     /** Push a fresh summary to an already-open panel, if one exists. */
-    update(summary: UsageSummary, extensionUri: vscode.Uri): void {
+    update(summary: UsageSummary, _extensionUri: vscode.Uri): void {
         this.lastSummary = summary;
         if (this.panel) {
-            this.panel.webview.html = buildHtml(this.panel.webview, summary, extensionUri);
+            this.panel.webview.html = buildDetailsHtml(summary);
         }
     }
 
@@ -60,17 +60,13 @@ export class DetailsPanel implements vscode.Disposable {
 // HTML generation
 // ---------------------------------------------------------------------------
 
-function buildHtml(
-    _webview: vscode.Webview,
-    summary: UsageSummary,
-    _extensionUri: vscode.Uri
-): string {
+export function buildDetailsHtml(summary: UsageSummary): string {
     const hasRateLimitData = summary.fiveHourUsedPercent !== undefined
         || summary.sevenDayUsedPercent !== undefined;
     const hasTokenCounts = !summary.isEstimated;
 
     const dataState = hasRateLimitData
-        ? 'Live local rate-limit data'
+        ? 'Local rate-limit data'
         : hasTokenCounts
         ? 'Local token counts'
         : 'Message-count estimate';
@@ -90,36 +86,18 @@ function buildHtml(
     const fiveHourRemaining = formatRelativeFuture(summary.fiveHourResetsAt);
     const sevenDayRemaining = formatRelativeFuture(summary.sevenDayResetsAt);
 
-    const fiveHourRateRow = summary.fiveHourUsedPercent !== undefined
-        ? detailRow(
-            '5-hour rate limit',
-            `<strong>${escapeHtml(formatPercent(summary.fiveHourUsedPercent))}%</strong> used`,
-            rateLimitMeta(summary.fiveHourUsedPercent, '5-hour rate-limit usage', fiveHourRemaining)
-        )
-        : detailRow(
-            summary.isEstimated ? '5-hour activity' : '5-hour tokens',
-            escapeHtml(fiveHourPrimary),
-            summary.isEstimated ? 'message-count estimate' : 'local token count'
-        );
-
-    const sevenDayRateRow = summary.sevenDayUsedPercent !== undefined
-        ? detailRow(
-            '7-day rate limit',
-            `<strong>${escapeHtml(formatPercent(summary.sevenDayUsedPercent))}%</strong> used`,
-            rateLimitMeta(summary.sevenDayUsedPercent, '7-day rate-limit usage', sevenDayRemaining)
-        )
-        : detailRow(
-            summary.isEstimated ? '7-day activity' : '7-day tokens',
-            escapeHtml(sevenDayPrimary),
-            summary.isEstimated ? 'message-count estimate' : 'local token count'
-        );
-
-    const supplementalTokenRows = hasRateLimitData && hasTokenCounts
-        ? [
-            detailRow('5-hour tokens', escapeHtml(formatTokens(summary.fiveHourTokens) ?? '0')),
-            detailRow('7-day tokens', escapeHtml(formatTokens(summary.sevenDayTokens) ?? '0')),
-        ].join('\n')
-        : '';
+    const fiveHourMeta = summary.fiveHourUsedPercent !== undefined
+        ? fiveHourRemaining ? `Resets in ${fiveHourRemaining}` : 'Reset time not found'
+        : summary.isEstimated ? 'Message-count estimate' : 'Local token count';
+    const sevenDayMeta = summary.sevenDayUsedPercent !== undefined
+        ? sevenDayRemaining ? `Resets in ${sevenDayRemaining}` : 'Reset time not found'
+        : summary.isEstimated ? 'Message-count estimate' : 'Local token count';
+    const fiveHourSupplement = summary.fiveHourUsedPercent !== undefined && hasTokenCounts
+        ? `${formatTokens(summary.fiveHourTokens) ?? '0'} local tokens`
+        : undefined;
+    const sevenDaySupplement = summary.sevenDayUsedPercent !== undefined && hasTokenCounts
+        ? `${formatTokens(summary.sevenDayTokens) ?? '0'} local tokens`
+        : undefined;
 
     const lastActivity = formatRelativeTime(summary.lastActivity);
     const lastActivityFull = summary.lastActivity
@@ -174,32 +152,32 @@ function buildHtml(
     .shell {
       width: min(920px, 100%);
       margin: 0 auto;
-      padding: 40px 32px 32px;
+      padding: 28px 32px 32px;
     }
     .hero {
       display: grid;
-      grid-template-columns: 76px minmax(0, 1fr);
-      gap: 20px;
+      grid-template-columns: 54px minmax(0, 1fr);
+      gap: 16px;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .mark {
-      width: 76px;
-      height: 76px;
-      border-radius: 10px;
-      filter: drop-shadow(0 10px 24px rgba(0,0,0,0.22));
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.2));
     }
     h1 {
-      font-size: 2.2rem;
+      font-size: 1.7rem;
       line-height: 1.08;
       font-weight: 700;
-      margin: 0 0 8px;
+      margin: 0 0 5px;
       color: var(--vscode-foreground);
     }
     .subtitle {
       color: var(--vscode-descriptionForeground);
-      font-size: 1rem;
-      line-height: 1.45;
+      font-size: 0.94rem;
+      line-height: 1.35;
       margin: 0;
     }
     .summary-card {
@@ -212,10 +190,10 @@ function buildHtml(
     }
     .card-head {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 24px 28px 10px;
+      padding: 20px 24px 8px;
     }
     .eyebrow {
       color: var(--vscode-descriptionForeground);
@@ -223,12 +201,7 @@ function buildHtml(
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      margin-bottom: 7px;
-    }
-    .headline {
-      font-size: 1.5rem;
-      font-weight: 700;
-      line-height: 1.2;
+      margin: 0;
     }
     .pill {
       flex: 0 0 auto;
@@ -247,10 +220,10 @@ function buildHtml(
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
-      padding: 12px 28px 22px;
+      padding: 10px 24px 20px;
     }
     .metric {
-      min-height: 96px;
+      min-height: 132px;
       border: 1px solid var(--vscode-widget-border, rgba(128,128,128,0.24));
       border-radius: 8px;
       padding: 14px 16px;
@@ -276,28 +249,36 @@ function buildHtml(
       font-size: 0.92rem;
       margin-top: 8px;
     }
-    .detail-list {
-      padding: 0 28px 20px;
+    .metric-extra {
+      color: var(--vscode-descriptionForeground);
+      font-size: 0.86rem;
+      margin-top: 6px;
     }
-    .detail-row {
+    .context-grid {
       display: grid;
-      grid-template-columns: minmax(150px, 0.42fr) minmax(0, 1fr);
-      gap: 24px;
-      align-items: center;
-      min-height: 50px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 24px;
+      margin: 0 24px;
+      padding: 4px 0 18px;
       border-top: 1px solid var(--vscode-widget-border, rgba(128,128,128,0.22));
     }
-    .detail-label {
-      color: var(--vscode-descriptionForeground);
-      font-size: 1.05rem;
-    }
-    .detail-value {
+    .context-item {
       min-width: 0;
-      font-size: 1.12rem;
-      line-height: 1.35;
+      padding-top: 14px;
     }
-    .detail-value strong {
-      font-size: 1.25rem;
+    .context-wide {
+      grid-column: 1 / -1;
+    }
+    .context-label {
+      color: var(--vscode-descriptionForeground);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .context-value {
+      min-width: 0;
+      font-size: 0.98rem;
+      line-height: 1.4;
     }
     .detail-meta {
       margin-top: 7px;
@@ -409,8 +390,7 @@ function buildHtml(
         font-size: 1.7rem;
       }
       .card-head,
-      .meter-grid,
-      .detail-list {
+      .meter-grid {
         padding-left: 18px;
         padding-right: 18px;
       }
@@ -424,13 +404,13 @@ function buildHtml(
       .sections {
         grid-template-columns: 1fr;
       }
-      .detail-row {
+      .context-grid {
         grid-template-columns: 1fr;
-        gap: 4px;
-        padding: 12px 0;
+        margin-left: 18px;
+        margin-right: 18px;
       }
-      .detail-value {
-        font-size: 1rem;
+      .context-wide {
+        grid-column: auto;
       }
     }
   </style>
@@ -470,33 +450,25 @@ function buildHtml(
       </svg>
       <div>
         <h1>Codex Local Meter</h1>
-        <p class="subtitle">Local-only usage display from Codex session metadata. Values remain estimates unless local rate-limit values are found.</p>
+        <p class="subtitle">Local Codex usage from session metadata. Values are estimates unless rate-limit data is found.</p>
       </div>
     </header>
 
     <article class="summary-card" aria-label="Codex Local Meter usage details">
       <div class="card-head">
-        <div>
-          <div class="eyebrow">Current usage</div>
-          <div class="headline">${escapeHtml(fiveHourPrimary)} · ${escapeHtml(sevenDayPrimary)}</div>
-        </div>
+        <div class="eyebrow">Usage windows</div>
         <div class="pill">${escapeHtml(dataState)}</div>
       </div>
 
       <div class="meter-grid">
-        ${metricTile('5-hour', fiveHourPrimary, summary.fiveHourUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', fiveHourRemaining ? `${fiveHourRemaining} left` : undefined)}
-        ${metricTile('7-day', sevenDayPrimary, summary.sevenDayUsedPercent !== undefined ? 'rate limit' : summary.isEstimated ? 'activity' : 'tokens', sevenDayRemaining ? `${sevenDayRemaining} left` : undefined)}
+        ${metricTile('5-hour window', fiveHourPrimary, fiveHourMeta, summary.fiveHourUsedPercent, fiveHourSupplement)}
+        ${metricTile('7-day window', sevenDayPrimary, sevenDayMeta, summary.sevenDayUsedPercent, sevenDaySupplement)}
       </div>
 
-      <div class="detail-list">
-        ${fiveHourRateRow}
-        ${sevenDayRateRow}
-        ${supplementalTokenRows}
-        ${detailRow('Last activity', escapeHtml(lastActivity), escapeHtml(lastActivityFull))}
-        ${detailRow('Sessions (7 d)', escapeHtml(summary.sessionCount.toString()))}
-        ${detailRow('Codex path', `<code>${escapeHtml(summary.codexPath)}</code>`)}
-        ${detailRow('Rate limits', hasRateLimitData ? 'live ✓' : 'not found')}
-        ${detailRow('Token counts', hasTokenCounts ? 'found ✓' : 'not found')}
+      <div class="context-grid">
+        ${contextItem('Last activity', escapeHtml(lastActivity), escapeHtml(lastActivityFull))}
+        ${contextItem('Sessions (7 days)', escapeHtml(summary.sessionCount.toString()))}
+        ${contextItem('Codex folder', `<code>${escapeHtml(summary.codexPath)}</code>`, undefined, true)}
       </div>
     </article>
 
@@ -530,15 +502,26 @@ function buildHtml(
 </html>`;
 }
 
-function metricTile(label: string, value: string, qualifier: string, meta?: string): string {
-    const metaHtml = meta
-        ? `<div class="metric-meta">${escapeHtml(meta)}</div>`
+function metricTile(
+    label: string,
+    value: string,
+    meta: string,
+    percent?: number,
+    supplemental?: string
+): string {
+    const supplementalHtml = supplemental
+        ? `<div class="metric-extra">${escapeHtml(supplemental)}</div>`
         : '';
+    const progressHtml = percent === undefined
+        ? ''
+        : progressBar(percent, `${label} usage`);
 
     return `<div class="metric">
-      <div class="metric-label">${escapeHtml(label)} ${escapeHtml(qualifier)}</div>
+      <div class="metric-label">${escapeHtml(label)}</div>
       <div class="metric-value">${formatMetricValue(value)}</div>
-      ${metaHtml}
+      <div class="metric-meta">${escapeHtml(meta)}</div>
+      ${supplementalHtml}
+      ${progressHtml}
     </div>`;
 }
 
@@ -550,14 +533,14 @@ function formatMetricValue(value: string): string {
     return `${escapeHtml(match[1])} <span>${escapeHtml(match[2])}</span>`;
 }
 
-function detailRow(label: string, valueHtml: string, metaHtml?: string): string {
+function contextItem(label: string, valueHtml: string, metaHtml?: string, wide = false): string {
     const meta = metaHtml
-        ? `<div class="detail-meta">${metaHtml}</div>`
+        ? `<div class="metric-extra">${metaHtml}</div>`
         : '';
 
-    return `<div class="detail-row">
-      <div class="detail-label">${escapeHtml(label)}</div>
-      <div class="detail-value">${valueHtml}${meta}</div>
+    return `<div class="context-item${wide ? ' context-wide' : ''}">
+      <div class="context-label">${escapeHtml(label)}</div>
+      <div class="context-value">${valueHtml}${meta}</div>
     </div>`;
 }
 
@@ -567,14 +550,6 @@ function progressBar(percent: number, label: string): string {
     return `<div class="detail-meta" role="img" aria-label="${escapeHtml(label)} ${clamped}%">
       <div class="bar"><div class="bar-fill" style="width: ${clamped}%"></div></div>
     </div>`;
-}
-
-function rateLimitMeta(percent: number, label: string, remaining: string | undefined): string {
-    const reset = remaining
-        ? `<div class="detail-meta muted">Resets in ${escapeHtml(remaining)}</div>`
-        : '';
-
-    return `${reset}${progressBar(percent, label)}`;
 }
 
 function escapeHtml(str: string): string {
