@@ -1,8 +1,9 @@
 import { UsageSummary, formatPercent, formatRelativeTime } from './usageCalculator';
 
-export interface TooltipThresholds {
+export interface TooltipOptions {
     warningThresholdPercent: number;
     dangerThresholdPercent: number;
+    showWeeklyUsage?: boolean;
 }
 
 interface Ring {
@@ -10,108 +11,96 @@ interface Ring {
     percent: number | undefined;
     resetsAt: Date | undefined;
     colour: string;
-    backgroundColour: string;
 }
 
-const circumference = 2 * Math.PI * 63;
+const circumference = 2 * Math.PI * 35;
 const fontFamily = 'Segoe UI, Arial, sans-serif';
 
 export function buildTooltipDashboardDataUri(
     summary: UsageSummary,
-    thresholds: TooltipThresholds
+    options: TooltipOptions
 ): string {
-    const fiveHour: Ring = {
-        label: '5-hour',
-        percent: summary.fiveHourUsedPercent,
-        resetsAt: summary.fiveHourResetsAt,
-        colour: '#f1f1ef',
-        backgroundColour: '#3a3a3a',
-    };
-    const sevenDay: Ring = {
-        label: '7-day',
-        percent: summary.sevenDayUsedPercent,
-        resetsAt: summary.sevenDayResetsAt,
-        colour: '#ff8a1d',
-        backgroundColour: '#111315',
-    };
-    const state = usageState(summary, thresholds);
+    const rings: Ring[] = [
+        {
+            label: '5-hour limit',
+            percent: summary.fiveHourUsedPercent,
+            resetsAt: summary.fiveHourResetsAt,
+            colour: '#f1f1ef',
+        },
+    ];
+
+    if (options.showWeeklyUsage !== false) {
+        rings.push({
+            label: '7-day limit',
+            percent: summary.sevenDayUsedPercent,
+            resetsAt: summary.sevenDayResetsAt,
+            colour: '#ff8a1d',
+        });
+    }
+
+    const panelStartY = 62;
+    const panelHeight = 104;
+    const panelGap = 10;
+    const footerY = panelStartY + rings.length * (panelHeight + panelGap) + 4;
+    const height = footerY + 66;
+    const state = usageState(rings, options);
     const pathText = `Folder ${truncateMiddle(summary.codexPath, 44)}`;
     const activityText = formatRelativeTime(summary.lastActivity);
+    const panels = rings
+        .map((ring, index) => panel(22, panelStartY + index * (panelHeight + panelGap), ring))
+        .join('');
 
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="500" viewBox="0 0 420 500" role="img" aria-label="Codex Local Meter rate-limit dashboard">
-  <defs>
-    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.24"/>
-    </filter>
-  </defs>
-  <rect x="4" y="4" width="412" height="492" rx="22" fill="#111315" stroke="#6b6b6c" stroke-width="1" filter="url(#shadow)"/>
-  <text x="22" y="34" fill="#f4f4f2" font-family="${fontFamily}" font-size="13" font-weight="800">Codex Local Meter</text>
-  <text x="22" y="52" fill="#a4a6a8" font-family="${fontFamily}" font-size="11">Local estimates only. No session content leaves your Mac.</text>
-  ${panel(22, 70, fiveHour, true)}
-  ${panel(22, 248, sevenDay, false)}
-  ${footer(state, activityText, pathText)}
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="${height}" viewBox="0 0 420 ${height}" role="img" aria-label="Codex Local Meter rate-limit dashboard">
+  <rect x="4" y="4" width="412" height="${height - 8}" rx="18" fill="#111315" stroke="#6b6b6c" stroke-width="1"/>
+  <text x="22" y="31" fill="#f4f4f2" font-family="${fontFamily}" font-size="13" font-weight="800">Codex Local Meter</text>
+  <text x="22" y="48" fill="#a4a6a8" font-family="${fontFamily}" font-size="11">Local only · No session content leaves your device</text>
+  ${panels}
+  ${footer(footerY, state, activityText, pathText)}
 </svg>`;
 
     return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-function panel(x: number, y: number, ring: Ring, filled: boolean): string {
+function panel(x: number, y: number, ring: Ring): string {
     const percent = clampPercent(ring.percent);
     const dash = circumference * percent / 100;
-    const resetText = formatReset(ring.resetsAt);
-    const detail = ring.percent === undefined
-        ? `${ring.label} usage not found`
-        : `${formatPercent(ring.percent)}% of ${ring.label} rate limit`;
-    const description = ring.percent === undefined
-        ? ['No local Codex rate-limit event has', 'been found yet.']
-        : ['Based on the latest local Codex rate-', 'limit event.'];
-    const panelBack = filled
-        ? `<rect x="${x}" y="${y}" width="382" height="170" rx="8" fill="${ring.backgroundColour}"/>`
-        : '';
-    const infoX = x + 174;
+    const resetText = ring.resetsAt === undefined
+        ? 'Reset time not found'
+        : `Resets in ${formatReset(ring.resetsAt)}`;
+    const statusText = ring.percent === undefined
+        ? 'Usage not found'
+        : `${formatPercent(ring.percent)}% used`;
+    const infoX = x + 112;
 
     return `<g>
-    ${panelBack}
-    <circle cx="${x + 82}" cy="${y + 85}" r="63" fill="none" stroke="#2f3030" stroke-width="14"/>
-    <circle cx="${x + 82}" cy="${y + 85}" r="63" fill="none" stroke="${ring.colour}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circumference.toFixed(2)}" transform="rotate(-90 ${x + 82} ${y + 85})"/>
-    <circle cx="${x + 82}" cy="${y + 85}" r="48" fill="#20241d"/>
-    <path d="M ${x + 35} ${y + 86} H ${x + 129} A 48 48 0 0 1 ${x + 82} ${y + 133} A 48 48 0 0 1 ${x + 35} ${y + 86}" fill="#272b23"/>
-    <path d="M ${x + 35} ${y + 86} H ${x + 129}" stroke="#3b4236" stroke-width="1"/>
-    <text x="${x + 82}" y="${y + 49}" fill="#9da19b" font-family="${fontFamily}" font-size="10" font-weight="800" text-anchor="middle">used</text>
-    <text x="${x + 82}" y="${y + 79}" fill="${ring.colour}" font-family="${fontFamily}" font-size="27" font-weight="800" text-anchor="middle">${escapeSvg(percentLabel(ring.percent))}</text>
-    <text x="${x + 82}" y="${y + 105}" fill="#9da19b" font-family="${fontFamily}" font-size="10" font-weight="800" text-anchor="middle">remaining</text>
-    <text x="${x + 82}" y="${y + 128}" fill="#aeb3ad" font-family="${fontFamily}" font-size="17" font-weight="800" text-anchor="middle">${escapeSvg(resetText)}</text>
-    <text x="${infoX}" y="${y + 50}" fill="#a9abad" font-family="${fontFamily}" font-size="11">${escapeSvg(ring.label)} window</text>
-    <text x="${infoX}" y="${y + 75}" fill="#f4f4f2" font-family="${fontFamily}" font-size="16" font-weight="800">${escapeSvg(detail)}</text>
-    <circle cx="${infoX + 4}" cy="${y + 95}" r="4" fill="none" stroke="#9b9d9f" stroke-width="1.2"/>
-    <path d="M ${infoX + 4} ${y + 92} V ${y + 95} L ${infoX + 7} ${y + 95}" fill="none" stroke="#9b9d9f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="${infoX + 16}" y="${y + 99}" fill="#c3c4c5" font-family="${fontFamily}" font-size="11">Clears in ${escapeSvg(resetText)}</text>
-    ${multilineText(infoX, y + 121, description, '#b4b6b7', 11)}
+    <rect x="${x}" y="${y}" width="376" height="104" rx="8" fill="#1b1d1f"/>
+    <circle cx="${x + 54}" cy="${y + 52}" r="35" fill="none" stroke="#343638" stroke-width="9"/>
+    <circle cx="${x + 54}" cy="${y + 52}" r="35" fill="none" stroke="${ring.colour}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circumference.toFixed(2)}" transform="rotate(-90 ${x + 54} ${y + 52})"/>
+    <text x="${x + 54}" y="${y + 49}" fill="${ring.colour}" font-family="${fontFamily}" font-size="18" font-weight="800" text-anchor="middle">${escapeSvg(percentLabel(ring.percent))}</text>
+    <text x="${x + 54}" y="${y + 65}" fill="#9da19b" font-family="${fontFamily}" font-size="9" font-weight="700" text-anchor="middle">USED</text>
+    <text x="${infoX}" y="${y + 37}" fill="#f4f4f2" font-family="${fontFamily}" font-size="14" font-weight="800">${escapeSvg(ring.label)}</text>
+    <text x="${infoX}" y="${y + 59}" fill="#c3c4c5" font-family="${fontFamily}" font-size="12">${escapeSvg(statusText)}</text>
+    <text x="${infoX}" y="${y + 79}" fill="#9a9d9f" font-family="${fontFamily}" font-size="11">${escapeSvg(resetText)}</text>
   </g>`;
 }
 
-function footer(state: string, activityText: string, pathText: string): string {
+function footer(y: number, state: string, activityText: string, pathText: string): string {
     const stateColour = state === 'Danger'
         ? '#d83b01'
         : state === 'Warning'
         ? '#ff8a1d'
-        : '#5f6f52';
+        : '#7d916d';
 
     return `<g>
-    <path d="M 25 421 L 29 413 L 33 421 Z" fill="${stateColour}"/>
-    <text x="43" y="423" fill="${stateColour}" font-family="${fontFamily}" font-size="11" font-weight="800">${escapeSvg(state)}</text>
-    <circle cx="354" cy="419" r="4" fill="none" stroke="#8f9295" stroke-width="1.2"/>
-    <path d="M 354 416 V 419 L 357 419" fill="none" stroke="#8f9295" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="368" y="423" fill="#b9bbbd" font-family="${fontFamily}" font-size="11">${escapeSvg(activityText)}</text>
-    <text x="22" y="462" fill="#9a9d9f" font-family="${fontFamily}" font-size="10">${escapeSvg(pathText)}</text>
+    <circle cx="26" cy="${y + 10}" r="4" fill="${stateColour}"/>
+    <text x="38" y="${y + 14}" fill="${stateColour}" font-family="${fontFamily}" font-size="11" font-weight="800">${escapeSvg(state)}</text>
+    <text x="398" y="${y + 14}" fill="#b9bbbd" font-family="${fontFamily}" font-size="11" text-anchor="end">${escapeSvg(activityText)}</text>
+    <text x="22" y="${y + 43}" fill="#9a9d9f" font-family="${fontFamily}" font-size="10">${escapeSvg(pathText)}</text>
   </g>`;
 }
 
-function usageState(summary: UsageSummary, thresholds: TooltipThresholds): string {
-    const highest = Math.max(
-        summary.fiveHourUsedPercent ?? -1,
-        summary.sevenDayUsedPercent ?? -1
-    );
+function usageState(rings: Ring[], thresholds: TooltipOptions): string {
+    const highest = Math.max(...rings.map(ring => ring.percent ?? -1));
     if (highest >= thresholds.dangerThresholdPercent) {
         return 'Danger';
     }
@@ -132,11 +121,7 @@ function percentLabel(percent: number | undefined): string {
     return percent === undefined ? '--' : `${formatPercent(percent)}%`;
 }
 
-function formatReset(date: Date | undefined): string {
-    if (date === undefined) {
-        return 'not found';
-    }
-
+function formatReset(date: Date): string {
     const diffMs = date.getTime() - Date.now();
     if (diffMs <= 0) {
         return 'now';
@@ -156,15 +141,6 @@ function formatReset(date: Date | undefined): string {
     const days = Math.floor(totalHours / 24);
     const hours = totalHours % 24;
     return hours === 0 ? `${days} d` : `${days} d ${hours} h`;
-}
-
-function multilineText(x: number, y: number, lines: string[], fill: string, fontSize: number): string {
-    const lineHeight = fontSize + 4;
-    const tspans = lines
-        .map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeSvg(line)}</tspan>`)
-        .join('');
-
-    return `<text x="${x}" y="${y}" fill="${fill}" font-family="${fontFamily}" font-size="${fontSize}">${tspans}</text>`;
 }
 
 function truncateMiddle(value: string, maxLength: number): string {

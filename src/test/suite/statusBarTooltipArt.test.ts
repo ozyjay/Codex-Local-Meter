@@ -36,17 +36,18 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
         ));
 
         assert.ok(svg.includes('Codex Local Meter'));
-        assert.ok(svg.includes('Local estimates only. No session content leaves your Mac.'));
-        assert.ok(svg.includes('29% of 5-hour rate limit'));
-        assert.ok(svg.includes('78% of 7-day rate limit'));
-        assert.ok(svg.includes('Clears in 28 min'));
-        assert.ok(svg.includes('Clears in 2 d 23 h'));
+        assert.ok(svg.includes('Local only · No session content leaves your device'));
+        assert.ok(svg.includes('5-hour limit'));
+        assert.ok(svg.includes('7-day limit'));
+        assert.ok(svg.includes('29% used'));
+        assert.ok(svg.includes('78% used'));
+        assert.ok(svg.includes('Resets in 28 min'));
+        assert.ok(svg.includes('Resets in 2 d 23 h'));
         assert.ok(svg.includes('Warning'));
         assert.ok(svg.includes('5 min ago'));
         assert.ok(svg.includes('fill="#111315"'));
-        assert.ok(svg.includes('Based on the latest local Codex rate-'));
-        assert.ok(svg.includes('limit event.'));
-        assert.ok(!svg.includes('>Based on the latest local Codex rate-limit event.<'));
+        assert.ok(svg.includes('height="360"'));
+        assert.ok(!svg.includes('Based on the latest local Codex'));
         assert.ok(!svg.includes('Refreshing'));
         assert.ok(!svg.includes('Diagnostics'));
     });
@@ -60,9 +61,26 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
             }
         ));
 
-        assert.ok(svg.includes('5-hour usage not found'));
-        assert.ok(svg.includes('95% of 7-day rate limit'));
+        assert.ok(svg.includes('5-hour limit'));
+        assert.ok(svg.includes('Usage not found'));
+        assert.ok(svg.includes('95% used'));
         assert.ok(svg.includes('>Danger<'));
+    });
+
+    test('hides the weekly row and ignores it for state when weekly usage is disabled', () => {
+        const svg = decodeDataUri(buildTooltipDashboardDataUri(
+            summary({ fiveHourUsedPercent: 20, sevenDayUsedPercent: 95 }),
+            {
+                warningThresholdPercent: 70,
+                dangerThresholdPercent: 90,
+                showWeeklyUsage: false,
+            }
+        ));
+
+        assert.ok(svg.includes('5-hour limit'));
+        assert.ok(!svg.includes('7-day limit'));
+        assert.ok(svg.includes('>Normal<'));
+        assert.ok(svg.includes('height="246"'));
     });
 
     test('escapes dynamic text before embedding it in SVG', () => {

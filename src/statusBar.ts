@@ -57,6 +57,7 @@ function buildTooltip(summary: UsageSummary, settings: Settings): vscode.Markdow
     const dashboardUri = buildTooltipDashboardDataUri(summary, {
         warningThresholdPercent: settings.warningThresholdPercent,
         dangerThresholdPercent: settings.dangerThresholdPercent,
+        showWeeklyUsage: settings.showWeeklyUsage,
     });
 
     md.appendMarkdown(`![Codex Local Meter rate-limit dashboard](${dashboardUri})\n\n`);
