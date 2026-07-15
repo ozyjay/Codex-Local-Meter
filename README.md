@@ -7,7 +7,7 @@ This extension is designed for people who want a quick view of recent Codex acti
 ## Highlights
 
 - Status bar indicator for recent Codex usage.
-- Tooltip with 5-hour and 7-day activity details, including reset timing when Codex records it locally.
+- Compact tooltip showing only the 5-hour and 7-day rate-limit windows that Codex records locally.
 - Details panel with usage estimates, detected models, session counts, source path, and parse issues.
 - Diagnostics command for checking whether the extension can find and read local Codex files.
 - Configurable Codex folder path, refresh interval, display mode, and warning thresholds.
@@ -32,13 +32,20 @@ Examples:
 
 | State | Example |
 | --- | --- |
-| Rate-limit data found | `$(codex-local-meter) 42% 5h · 2 h left` |
+| 5-hour rate-limit data found | `$(codex-local-meter) 42%` |
+| 7-day rate-limit fallback | `$(codex-local-meter) 18% 7d` |
 | Token counts found | `$(codex-local-meter) 12.4k 5h` |
 | Message-count fallback | `$(codex-local-meter) ~12 msgs 5h` |
 | No local data yet | `$(codex-local-meter) --` |
 | Compact mode | `$(codex-local-meter) 42%` |
 
 The status bar text changes color when usage reaches the configured warning or danger threshold.
+
+### Hover Tooltip
+
+The status bar tooltip shows a rate-limit window only when that window was found in local Codex data. For example, if Codex reports a 7-day limit but no 5-hour limit, the tooltip shows only the 7-day card. It does not display an empty or "unknown" 5-hour card.
+
+When neither rate-limit window is available, the tooltip shows one compact unavailable state and links to the details panel, where local token or message-count activity can still be viewed. The 7-day tooltip card also respects the `showWeeklyUsage` setting.
 
 ## Details Panel
 
@@ -77,7 +84,7 @@ All settings are under `codexLocalMeter.*`.
 | `codexPath` | `""` | Override the Codex data directory. Empty means `~/.codex`. |
 | `refreshIntervalSeconds` | `300` | How often to re-read local Codex files. Minimum 30 seconds. |
 | `showFiveHourUsage` | `true` | Show 5-hour usage in the status bar. |
-| `showWeeklyUsage` | `true` | Show 7-day usage in the tooltip and use it as the status-bar fallback when 5-hour rate-limit data is unavailable. |
+| `showWeeklyUsage` | `true` | Show locally available 7-day rate-limit data in the tooltip and use it as the status-bar fallback when 5-hour rate-limit data is unavailable. |
 | `warningThresholdPercent` | `70` | Show warning colors at or above this percentage. |
 | `dangerThresholdPercent` | `90` | Show danger colors at or above this percentage. |
 | `compactMode` | `false` | Use shorter status bar text. |
@@ -85,6 +92,8 @@ All settings are under `codexLocalMeter.*`.
 ## How Usage Is Estimated
 
 Codex Local Meter scans local Codex JSONL session files and looks for usage-relevant records. When local rate-limit percentages are present, those values are shown first. Codex may store a 5-hour or 7-day window under either the `primary` or `secondary` field, so the extension identifies known windows by their reported duration rather than their field name. When token counts are present, token totals are shown. When neither is available, the extension falls back to message counts and marks the result as an estimate.
+
+Five-hour support remains available because some local Codex records include that shorter rate-limit window, but the UI does not assume it exists. Unavailable rate-limit windows are omitted from the hover tooltip.
 
 These numbers are best-effort local estimates. They are not official billing records, account quota records, or service-side usage statements.
 
