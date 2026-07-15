@@ -7,7 +7,7 @@ This extension is designed for people who want a quick view of recent Codex acti
 ## Highlights
 
 - Status bar indicator for recent Codex usage.
-- Compact tooltip showing only the 5-hour and 7-day rate-limit windows that Codex records locally.
+- Compact tooltip showing only the rate-limit windows available in local Codex data.
 - Details panel with usage estimates, detected models, session counts, source path, and parse issues.
 - Diagnostics command for checking whether the extension can find and read local Codex files.
 - Configurable Codex folder path, refresh interval, display mode, and warning thresholds.
@@ -28,16 +28,16 @@ Codex Local Meter only reads local files and only displays derived metadata.
 
 The status bar item appears after VS Code startup and refreshes automatically.
 
-Examples:
+The meter icon appears before each value. Example text:
 
 | State | Example |
 | --- | --- |
-| 5-hour rate-limit data found | `$(codex-local-meter) 42%` |
-| 7-day rate-limit fallback | `$(codex-local-meter) 18% 7d` |
-| Token counts found | `$(codex-local-meter) 12.4k 5h` |
-| Message-count fallback | `$(codex-local-meter) ~12 msgs 5h` |
-| No local data yet | `$(codex-local-meter) --` |
-| Compact mode | `$(codex-local-meter) 42%` |
+| 5-hour rate-limit data found | `42%` |
+| 7-day rate-limit fallback | `18% 7d` |
+| Token counts found | `12.4k 5h` |
+| Message-count fallback | `~12 msgs 5h` |
+| No local data yet | `--` |
+| Compact token count | `12.4k` |
 
 The status bar text changes color when usage reaches the configured warning or danger threshold.
 
@@ -83,11 +83,11 @@ All settings are under `codexLocalMeter.*`.
 | --- | --- | --- |
 | `codexPath` | `""` | Override the Codex data directory. Empty means `~/.codex`. |
 | `refreshIntervalSeconds` | `300` | How often to re-read local Codex files. Minimum 30 seconds. |
-| `showFiveHourUsage` | `true` | Show 5-hour usage in the status bar. |
-| `showWeeklyUsage` | `true` | Show locally available 7-day rate-limit data in the tooltip and use it as the status-bar fallback when 5-hour rate-limit data is unavailable. |
+| `showFiveHourUsage` | `true` | Show available 5-hour usage in the status bar. |
+| `showWeeklyUsage` | `true` | Show available 7-day usage in the tooltip and status bar. |
 | `warningThresholdPercent` | `70` | Show warning colors at or above this percentage. |
 | `dangerThresholdPercent` | `90` | Show danger colors at or above this percentage. |
-| `compactMode` | `false` | Use shorter status bar text. |
+| `compactMode` | `false` | Hide window and message suffixes in status-bar fallback text, such as `12.4k` instead of `12.4k 5h`. |
 
 ## How Usage Is Estimated
 

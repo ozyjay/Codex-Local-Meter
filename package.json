@@ -89,12 +89,12 @@
         "codexLocalMeter.showFiveHourUsage": {
           "type": "boolean",
           "default": true,
-          "description": "Show 5-hour estimated usage in the status bar."
+          "description": "Show available 5-hour usage in the status bar."
         },
         "codexLocalMeter.showWeeklyUsage": {
           "type": "boolean",
           "default": true,
-          "description": "Show 7-day usage in the tooltip and use it as the status-bar fallback when 5-hour rate-limit data is unavailable."
+          "description": "Show available 7-day usage in the tooltip and status bar."
         },
         "codexLocalMeter.warningThresholdPercent": {
           "type": "number",
@@ -113,7 +113,7 @@
         "codexLocalMeter.compactMode": {
           "type": "boolean",
           "default": false,
-          "description": "Shorten status bar text (e.g. '42%' instead of '42% 5h')."
+          "description": "Hide window and message suffixes in status-bar fallback text (e.g. '12.4k' instead of '12.4k 5h')."
         }
       }
     }
