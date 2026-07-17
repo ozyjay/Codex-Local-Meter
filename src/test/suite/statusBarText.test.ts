@@ -25,6 +25,8 @@ function summary(overrides: Partial<UsageSummary>): UsageSummary {
 }
 
 suite('statusBarText - buildStatusBarText()', () => {
+    const nowMs = Date.UTC(2026, 6, 17, 0, 0, 0);
+
     test('formats rate-limit usage without repeating the product name', () => {
         const text = buildStatusBarText(
             summary({ fiveHourUsedPercent: 42 }),
@@ -35,16 +37,17 @@ suite('statusBarText - buildStatusBarText()', () => {
         assert.ok(!text.includes('Codex'));
     });
 
-    test('formats 5-hour rate-limit time remaining in full mode', () => {
+    test('adds actual weekly days left to the current percentage in full mode', () => {
         const text = buildStatusBarText(
             summary({
                 fiveHourUsedPercent: 42,
-                fiveHourResetsAt: new Date(Date.now() + 2 * 3_600_000),
+                sevenDayResetsAt: new Date(nowMs + (4 * 24 + 2) * 3_600_000),
             }),
-            baseSettings
+            baseSettings,
+            nowMs
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 42%');
+        assert.strictEqual(text, '$(codex-local-meter) 42% 5d');
     });
 
     test('rounds fractional rate-limit percentages to whole numbers', () => {
@@ -56,13 +59,27 @@ suite('statusBarText - buildStatusBarText()', () => {
         assert.strictEqual(text, '$(codex-local-meter) 3%');
     });
 
-    test('uses the weekly percentage as a labeled fallback when five-hour data is unavailable', () => {
+    test('uses the weekly percentage and its actual reset countdown as a fallback', () => {
         const text = buildStatusBarText(
-            summary({ sevenDayUsedPercent: 18 }),
-            baseSettings
+            summary({
+                sevenDayUsedPercent: 18,
+                sevenDayResetsAt: new Date(nowMs + 3 * 24 * 3_600_000),
+            }),
+            baseSettings,
+            nowMs
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 18% 7d');
+        assert.strictEqual(text, '$(codex-local-meter) 18% 3d');
+    });
+
+    test('does not invent days left when the weekly reset is unavailable', () => {
+        const text = buildStatusBarText(
+            summary({ fiveHourUsedPercent: 42 }),
+            baseSettings,
+            nowMs
+        );
+
+        assert.strictEqual(text, '$(codex-local-meter) 42%');
     });
 
     test('does not use the weekly fallback when weekly usage is hidden', () => {

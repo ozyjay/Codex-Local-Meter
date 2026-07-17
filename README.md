@@ -32,8 +32,8 @@ The meter icon appears before each value. Example text:
 
 | State | Example |
 | --- | --- |
-| 5-hour rate-limit data found | `42%` |
-| 7-day rate-limit fallback | `18% 7d` |
+| 5-hour rate-limit data with a weekly reset in five days | `42% 5d` |
+| 7-day rate-limit fallback with a reset in three days | `18% 3d` |
 | Token counts found | `12.4k 5h` |
 | Message-count fallback | `~12 msgs 5h` |
 | No local data yet | `--` |
