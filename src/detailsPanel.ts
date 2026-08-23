@@ -461,8 +461,8 @@ export function buildDetailsHtml(summary: UsageSummary): string {
       </div>
 
       <div class="meter-grid">
-        ${metricTile('5-hour window', fiveHourPrimary, fiveHourMeta, summary.fiveHourUsedPercent, fiveHourSupplement)}
-        ${metricTile('7-day window', sevenDayPrimary, sevenDayMeta, summary.sevenDayUsedPercent, sevenDaySupplement)}
+        ${metricTile('Primary', fiveHourPrimary, fiveHourMeta, summary.fiveHourUsedPercent, fiveHourSupplement)}
+        ${metricTile('Secondary', sevenDayPrimary, sevenDayMeta, summary.sevenDayUsedPercent, sevenDaySupplement)}
       </div>
 
       <div class="context-grid">

@@ -34,17 +34,17 @@ export async function showDiagnostics(
 
     // Usage summary
     lines.push('USAGE (estimates)');
-    lines.push(`  Sessions (7 d)  : ${summary.sessionCount}`);
+    lines.push(`  Recent sessions : ${summary.sessionCount}`);
     lines.push(`  Token counts    : ${summary.isEstimated ? 'NOT FOUND — using message counts' : 'found'}`);
     if (summary.isEstimated) {
-        lines.push(`  5-hour messages : ~${summary.fiveHourMessages ?? 0}`);
-        lines.push(`  7-day messages  : ~${summary.sevenDayMessages ?? 0}`);
+        lines.push(`  Primary messages   : ~${summary.fiveHourMessages ?? 0}`);
+        lines.push(`  Secondary messages : ~${summary.sevenDayMessages ?? 0}`);
     } else {
-        lines.push(`  5-hour tokens   : ${summary.fiveHourTokens ?? 0}`);
-        lines.push(`  7-day tokens    : ${summary.sevenDayTokens ?? 0}`);
+        lines.push(`  Primary tokens   : ${summary.fiveHourTokens ?? 0}`);
+        lines.push(`  Secondary tokens : ${summary.sevenDayTokens ?? 0}`);
     }
-    lines.push(`  5-hour reset    : ${formatReset(summary.fiveHourResetsAt)}`);
-    lines.push(`  7-day reset     : ${formatReset(summary.sevenDayResetsAt)}`);
+    lines.push(`  Primary reset    : ${formatReset(summary.fiveHourResetsAt)}`);
+    lines.push(`  Secondary reset  : ${formatReset(summary.sevenDayResetsAt)}`);
     lines.push(`  Last activity   : ${formatRelativeTime(summary.lastActivity)}`);
     lines.push(`  Models detected : ${summary.modelNames.length > 0 ? summary.modelNames.join(', ') : '(none)'}`);
     lines.push('');

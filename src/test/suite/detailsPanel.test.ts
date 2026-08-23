@@ -26,8 +26,8 @@ suite('detailsPanel - buildDetailsHtml()', () => {
         }));
 
         assert.ok(html.includes('Usage windows'));
-        assert.strictEqual(occurrences(html, 'metric-label">5-hour window'), 1);
-        assert.strictEqual(occurrences(html, 'metric-label">7-day window'), 1);
+        assert.strictEqual(occurrences(html, 'metric-label">Primary'), 1);
+        assert.strictEqual(occurrences(html, 'metric-label">Secondary'), 1);
         assert.ok(html.includes('6.9M <span>tokens</span>'));
         assert.ok(html.includes('5% <span>used</span>'));
         assert.ok(html.includes('20.0M local tokens'));

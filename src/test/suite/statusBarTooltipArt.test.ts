@@ -37,8 +37,8 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
 
         assert.ok(svg.includes('Codex Local Meter'));
         assert.ok(svg.includes('Local only · No session content leaves your device'));
-        assert.ok(svg.includes('5-hour limit'));
-        assert.ok(svg.includes('7-day limit'));
+        assert.ok(svg.includes('Primary limit'));
+        assert.ok(svg.includes('Secondary limit'));
         assert.ok(svg.includes('29% used'));
         assert.ok(svg.includes('78% used'));
         assert.ok(svg.includes('Resets in 28 min'));
@@ -61,9 +61,9 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
             }
         ));
 
-        assert.ok(!svg.includes('5-hour limit'));
+        assert.ok(!svg.includes('Primary limit'));
         assert.ok(!svg.includes('Usage not found'));
-        assert.ok(svg.includes('7-day limit'));
+        assert.ok(svg.includes('Secondary limit'));
         assert.ok(svg.includes('95% used'));
         assert.ok(svg.includes('>Danger<'));
         assert.ok(svg.includes('height="246"'));
@@ -78,8 +78,8 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
             }
         ));
 
-        assert.ok(!svg.includes('5-hour limit'));
-        assert.ok(!svg.includes('7-day limit'));
+        assert.ok(!svg.includes('Primary limit'));
+        assert.ok(!svg.includes('Secondary limit'));
         assert.ok(svg.includes('Rate-limit data not found'));
         assert.ok(svg.includes('Open Details to view local activity estimates.'));
         assert.ok(svg.includes('>Unavailable<'));
@@ -96,8 +96,8 @@ suite('statusBarTooltipArt - buildTooltipDashboardDataUri()', () => {
             }
         ));
 
-        assert.ok(svg.includes('5-hour limit'));
-        assert.ok(!svg.includes('7-day limit'));
+        assert.ok(svg.includes('Primary limit'));
+        assert.ok(!svg.includes('Secondary limit'));
         assert.ok(svg.includes('>Normal<'));
         assert.ok(svg.includes('height="246"'));
     });

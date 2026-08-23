@@ -57,12 +57,12 @@ function buildFullText(summary: UsageSummary, settings: Settings, nowMs: number)
 
     if (summary.isEstimated) {
         const msgs = summary.fiveHourMessages ?? 0;
-        return `${icon} ~${msgs} msgs 5h`;
+        return `${icon} ~${msgs} primary`;
     }
 
     const tokens = summary.fiveHourTokens ?? 0;
     const formatted = formatTokens(tokens) ?? '0';
-    return `${icon} ${formatted} 5h`;
+    return `${icon} ${formatted} primary`;
 }
 
 function formatDaysLeft(resetsAt: Date | undefined, nowMs: number): number | undefined {

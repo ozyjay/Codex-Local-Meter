@@ -24,7 +24,7 @@ export function buildTooltipDashboardDataUri(
 
     if (summary.fiveHourUsedPercent !== undefined) {
         rings.push({
-            label: '5-hour limit',
+            label: 'Primary limit',
             percent: summary.fiveHourUsedPercent,
             resetsAt: summary.fiveHourResetsAt,
             colour: '#f1f1ef',
@@ -33,7 +33,7 @@ export function buildTooltipDashboardDataUri(
 
     if (options.showWeeklyUsage !== false && summary.sevenDayUsedPercent !== undefined) {
         rings.push({
-            label: '7-day limit',
+            label: 'Secondary limit',
             percent: summary.sevenDayUsedPercent,
             resetsAt: summary.sevenDayResetsAt,
             colour: '#ff8a1d',

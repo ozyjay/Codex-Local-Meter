@@ -88,7 +88,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             { ...baseSettings, showWeeklyUsage: false }
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 12.4k 5h');
+        assert.strictEqual(text, '$(codex-local-meter) 12.4k primary');
     });
 
     test('selects the weekly percentage for status-bar threshold coloring', () => {
@@ -104,7 +104,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) 12.4k 5h');
+        assert.strictEqual(text, '$(codex-local-meter) 12.4k primary');
     });
 
     test('formats estimated message fallback without repeating the product name', () => {
@@ -113,7 +113,7 @@ suite('statusBarText - buildStatusBarText()', () => {
             baseSettings
         );
 
-        assert.strictEqual(text, '$(codex-local-meter) ~12 msgs 5h');
+        assert.strictEqual(text, '$(codex-local-meter) ~12 primary');
     });
 
     test('formats compact mode with the icon and value only', () => {
