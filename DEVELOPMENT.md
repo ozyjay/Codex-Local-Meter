@@ -20,9 +20,12 @@ Packaging and publishing scripts use PowerShell Core (`pwsh`). On macOS or Linux
 | `npm run watch` | Runs the TypeScript compiler in watch mode. | While actively editing TypeScript. |
 | `npm run lint` | Runs ESLint over `src/**/*.ts`. | After source changes, before release packaging. |
 | `npm run unit-test` | Runs the compiled Mocha unit tests for parser, calculator, and status text logic. | For logic-only changes. Run `npm run compile` first if `out/` is stale. |
-| `npm test` | Compiles first, then runs the VS Code extension test runner. | When activation, commands, or VS Code APIs are touched. |
+| `npm test` | Compiles a temporary `.test-out/` extension, then runs the VS Code extension-host test runner. | When activation, commands, or VS Code APIs are touched. |
 | `npm run vscode:prepublish` | Compiles the extension. | Used by VS Code packaging workflows. |
-| `npm run publish:patch` | Builds, publishes, and verifies a patch release. | Marketplace release flow after `vsce` authentication. |
+| `npm run package:vsix` | Builds a local `.vsix` package. | Before manually installing or publishing a package. |
+| `npm run package:patch`, `package:minor`, or `package:major` | Bumps the selected version, then builds a local `.vsix` package. | Preparing a versioned release package. |
+| `npm run publish:vsix` | Packages, publishes, and verifies the current version. | Publishing without a version bump. |
+| `npm run publish:patch`, `publish:minor`, or `publish:major` | Bumps the selected version, packages, publishes, and verifies it. | Marketplace release flow after `vsce` authentication. |
 
 Examples:
 
@@ -33,7 +36,7 @@ npm run unit-test
 npm test
 ```
 
-`npm test` launches a VS Code Electron test instance. If it aborts with `SIGABRT` under a restricted shell or sandbox, rerun it in a normal terminal.
+`npm test` launches a VS Code Electron test instance from the temporary `.test-out/` folder. This keeps the normal `out/` build separate so testing can proceed while VS Code has files in `out/` open. `.test-out/` is generated and ignored by Git. The runner may print harmless VS Code/Electron environment warnings; treat the run as successful when it ends with `passing` and exit code `0`.
 
 Keep `@vscode/vsce` current before publishing. Check the local version with:
 
@@ -129,6 +132,17 @@ Publish to the VS Code Marketplace from a terminal:
    ```powershell
    npx vsce show CrunchyCodes.codex-local-meter
    ```
+
+   To invoke the underlying publish script directly, use:
+
+   ```powershell
+   pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1
+   pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 -VersionBump patch
+   pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 -VersionBump minor
+   pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/PublishVsix.ps1 -VersionBump major
+   ```
+
+   `PublishVsix.ps1` packages the current version when `-VersionBump` is omitted (or `none`), or uses the corresponding version-bump packaging flow before publishing. It publishes the newest generated `.vsix` and then verifies the Marketplace item. Pass `-Help` to display the script's usage summary.
 
 3. Also check the Marketplace page: <https://marketplace.visualstudio.com/items?itemName=CrunchyCodes.codex-local-meter>
 
