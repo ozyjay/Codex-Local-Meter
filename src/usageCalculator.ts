@@ -1,10 +1,13 @@
-import { RawEvent } from './codexReader';
+import { RateLimitWindow, RateLimits, RawEvent } from './codexReader';
 
-export interface UsageSummary {
+export interface ActivitySummary {
     fiveHourTokens?: number;
     fiveHourMessages?: number;
     sevenDayTokens?: number;
     sevenDayMessages?: number;
+}
+
+export interface UsageSummary extends ActivitySummary {
     /** true when no token counts were found — numbers are message-count estimates */
     isEstimated: boolean;
     lastActivity?: Date;
@@ -12,18 +15,13 @@ export interface UsageSummary {
     sessionCount: number;
     modelNames: string[];
     parseErrors: string[];
-    /** Most-recent 5-hour rate-limit used % from the Codex API. Takes priority over computed ratios. */
-    fiveHourUsedPercent?: number;
-    /** Most-recent 7-day rate-limit used % from the Codex API. */
-    sevenDayUsedPercent?: number;
-    /** Most-recent 5-hour rate-limit reset time from the Codex API. */
-    fiveHourResetsAt?: Date;
-    /** Most-recent 7-day rate-limit reset time from the Codex API. */
-    sevenDayResetsAt?: Date;
+    /** Most-recent fresh rate-limit windows reported directly by Codex. */
+    rateLimits: RateLimits;
 }
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const UNKNOWN_RATE_LIMIT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export function calculate(
     events: RawEvent[],
@@ -37,11 +35,12 @@ export function calculate(
             sessionCount: 0,
             modelNames: [],
             parseErrors,
+            rateLimits: {},
         };
     }
 
     const now = Date.now();
-    const fiveHourCutoff = resolveFiveHourCutoff(events, now);
+    const fiveHourCutoff = now - FIVE_HOURS_MS;
     const sevenDayCutoff = now - SEVEN_DAYS_MS;
 
     let fiveHourInputTokens = 0;
@@ -54,12 +53,10 @@ export function calculate(
     let lastActivity: Date | undefined;
     const sessionIds = new Set<string>();
     const modelSet = new Set<string>();
-    let latestFiveHourRateLimitTs = 0;
-    let latestSevenDayRateLimitTs = 0;
-    let latestFiveHourUsedPercent: number | undefined;
-    let latestSevenDayUsedPercent: number | undefined;
-    let latestFiveHourResetsAt: Date | undefined;
-    let latestSevenDayResetsAt: Date | undefined;
+    let latestPrimaryRateLimitTs = -Infinity;
+    let latestSecondaryRateLimitTs = -Infinity;
+    let latestPrimaryRateLimit: RateLimitWindow | undefined;
+    let latestSecondaryRateLimit: RateLimitWindow | undefined;
 
     for (const event of events) {
         const eventMs = event.timestamp.getTime();
@@ -77,28 +74,20 @@ export function calculate(
             hasTokens = true;
         }
 
-        // Track most-recent local rate-limit state while its reset window is still relevant.
-        if (isRateLimitFresh(eventMs, now, fiveHourCutoff, event.fiveHourResetsAt)
-            && (event.fiveHourUsedPercent !== undefined || event.fiveHourResetsAt !== undefined)
-            && eventMs >= latestFiveHourRateLimitTs) {
-            latestFiveHourRateLimitTs = eventMs;
-            if (event.fiveHourUsedPercent !== undefined) {
-                latestFiveHourUsedPercent = event.fiveHourUsedPercent;
+        // A rate_limits object is an authoritative snapshot. Its slots are updated
+        // independently, and an omitted/null slot clears an older value for that slot.
+        if (event.rateLimits !== undefined) {
+            if (eventMs >= latestPrimaryRateLimitTs) {
+                latestPrimaryRateLimitTs = eventMs;
+                latestPrimaryRateLimit = isRateLimitFresh(event.rateLimits.primary, eventMs, now)
+                    ? event.rateLimits.primary
+                    : undefined;
             }
-            if (event.fiveHourResetsAt !== undefined) {
-                latestFiveHourResetsAt = event.fiveHourResetsAt;
-            }
-        }
-
-        if (isRateLimitFresh(eventMs, now, sevenDayCutoff, event.sevenDayResetsAt)
-            && (event.sevenDayUsedPercent !== undefined || event.sevenDayResetsAt !== undefined)
-            && eventMs >= latestSevenDayRateLimitTs) {
-            latestSevenDayRateLimitTs = eventMs;
-            if (event.sevenDayUsedPercent !== undefined) {
-                latestSevenDayUsedPercent = event.sevenDayUsedPercent;
-            }
-            if (event.sevenDayResetsAt !== undefined) {
-                latestSevenDayResetsAt = event.sevenDayResetsAt;
+            if (eventMs >= latestSecondaryRateLimitTs) {
+                latestSecondaryRateLimitTs = eventMs;
+                latestSecondaryRateLimit = isRateLimitFresh(event.rateLimits.secondary, eventMs, now)
+                    ? event.rateLimits.secondary
+                    : undefined;
             }
         }
 
@@ -125,10 +114,10 @@ export function calculate(
         sessionCount: sessionIds.size,
         modelNames: Array.from(modelSet).sort(),
         parseErrors,
-        fiveHourUsedPercent: latestFiveHourUsedPercent,
-        sevenDayUsedPercent: latestSevenDayUsedPercent,
-        fiveHourResetsAt: latestFiveHourResetsAt,
-        sevenDayResetsAt: latestSevenDayResetsAt,
+        rateLimits: {
+            ...(latestPrimaryRateLimit === undefined ? {} : { primary: latestPrimaryRateLimit }),
+            ...(latestSecondaryRateLimit === undefined ? {} : { secondary: latestSecondaryRateLimit }),
+        },
     };
 
     if (hasTokens) {
@@ -142,39 +131,24 @@ export function calculate(
     return summary;
 }
 
-function resolveFiveHourCutoff(events: RawEvent[], now: number): number {
-    const rollingCutoff = now - FIVE_HOURS_MS;
-    let latestFiveHourResetMs: number | undefined;
-
-    for (const event of events) {
-        const resetMs = event.fiveHourResetsAt?.getTime();
-        if (resetMs !== undefined && !isNaN(resetMs)
-            && (latestFiveHourResetMs === undefined || resetMs > latestFiveHourResetMs)) {
-            latestFiveHourResetMs = resetMs;
-        }
-    }
-
-    if (latestFiveHourResetMs === undefined) {
-        return rollingCutoff;
-    }
-
-    const blockCutoff = latestFiveHourResetMs > now
-        ? latestFiveHourResetMs - FIVE_HOURS_MS
-        : latestFiveHourResetMs;
-
-    return Math.max(rollingCutoff, blockCutoff);
-}
-
 function isRateLimitFresh(
+    window: RateLimitWindow | undefined,
     eventMs: number,
-    now: number,
-    cutoffMs: number,
-    resetsAt: Date | undefined
-): boolean {
-    if (resetsAt !== undefined) {
-        return resetsAt.getTime() > now;
+    now: number
+): window is RateLimitWindow {
+    if (window === undefined) {
+        return false;
     }
-    return eventMs >= cutoffMs;
+    if (window.resetsAt !== undefined) {
+        return window.resetsAt.getTime() > now;
+    }
+    if (window.windowMinutes !== undefined) {
+        return eventMs + window.windowMinutes * 60_000 > now;
+    }
+
+    // Older local records can omit both reset and duration. Keep a recent
+    // observation for compatibility, but never let an old session persist forever.
+    return eventMs >= now - UNKNOWN_RATE_LIMIT_MAX_AGE_MS;
 }
 
 /**

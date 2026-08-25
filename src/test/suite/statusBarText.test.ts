@@ -6,8 +6,8 @@ import { UsageSummary } from '../../usageCalculator';
 const baseSettings: Settings = {
     codexPath: '/fake/.codex',
     refreshIntervalSeconds: 300,
-    showFiveHourUsage: true,
-    showWeeklyUsage: true,
+    showPrimaryUsage: true,
+    showSecondaryUsage: true,
     warningThresholdPercent: 70,
     dangerThresholdPercent: 90,
     compactMode: false,
@@ -20,6 +20,7 @@ function summary(overrides: Partial<UsageSummary>): UsageSummary {
         sessionCount: 1,
         modelNames: [],
         parseErrors: [],
+        rateLimits: {},
         ...overrides,
     };
 }
@@ -27,119 +28,85 @@ function summary(overrides: Partial<UsageSummary>): UsageSummary {
 suite('statusBarText - buildStatusBarText()', () => {
     const nowMs = Date.UTC(2026, 6, 17, 0, 0, 0);
 
-    test('formats rate-limit usage without repeating the product name', () => {
-        const text = buildStatusBarText(
-            summary({ fiveHourUsedPercent: 42 }),
-            baseSettings
-        );
-
-        assert.strictEqual(text, '$(codex-local-meter) 42%');
-        assert.ok(!text.includes('Codex'));
-    });
-
-    test('adds actual weekly days left to the current percentage in full mode', () => {
-        const text = buildStatusBarText(
-            summary({
-                fiveHourUsedPercent: 42,
-                sevenDayResetsAt: new Date(nowMs + (4 * 24 + 2) * 3_600_000),
-            }),
-            baseSettings,
-            nowMs
-        );
+    test('prefers Primary and uses Primary reset time', () => {
+        const text = buildStatusBarText(summary({
+            rateLimits: {
+                primary: { usedPercent: 42, windowMinutes: 10_080, resetsAt: new Date(nowMs + (4 * 24 + 2) * 3_600_000) },
+                secondary: { usedPercent: 18, windowMinutes: 300, resetsAt: new Date(nowMs + 2 * 3_600_000) },
+            },
+        }), baseSettings, nowMs);
 
         assert.strictEqual(text, '$(codex-local-meter) 42% 5d');
     });
 
-    test('rounds fractional rate-limit percentages to whole numbers', () => {
-        const text = buildStatusBarText(
-            summary({ fiveHourUsedPercent: 2.55 }),
-            baseSettings
-        );
-
-        assert.strictEqual(text, '$(codex-local-meter) 3%');
-    });
-
-    test('uses the weekly percentage and its actual reset countdown as a fallback', () => {
-        const text = buildStatusBarText(
-            summary({
-                sevenDayUsedPercent: 18,
-                sevenDayResetsAt: new Date(nowMs + 3 * 24 * 3_600_000),
-            }),
-            baseSettings,
-            nowMs
-        );
-
-        assert.strictEqual(text, '$(codex-local-meter) 18% 3d');
-    });
-
-    test('does not invent days left when the weekly reset is unavailable', () => {
-        const text = buildStatusBarText(
-            summary({ fiveHourUsedPercent: 42 }),
-            baseSettings,
-            nowMs
-        );
-
-        assert.strictEqual(text, '$(codex-local-meter) 42%');
-    });
-
-    test('does not use the weekly fallback when weekly usage is hidden', () => {
-        const text = buildStatusBarText(
-            summary({ fiveHourTokens: 12400, sevenDayUsedPercent: 18 }),
-            { ...baseSettings, showWeeklyUsage: false }
-        );
-
-        assert.strictEqual(text, '$(codex-local-meter) 12.4k primary');
-    });
-
-    test('selects the weekly percentage for status-bar threshold coloring', () => {
+    test('uses Primary hour and minute reset suffixes', () => {
         assert.strictEqual(
-            selectStatusBarUsagePercent(summary({ sevenDayUsedPercent: 95 }), baseSettings),
-            95
+            buildStatusBarText(summary({
+                rateLimits: { primary: { usedPercent: 42, resetsAt: new Date(nowMs + 2 * 3_600_000) } },
+            }), baseSettings, nowMs),
+            '$(codex-local-meter) 42% 2h'
+        );
+        assert.strictEqual(
+            buildStatusBarText(summary({
+                rateLimits: { primary: { usedPercent: 42, resetsAt: new Date(nowMs + 28 * 60_000) } },
+            }), baseSettings, nowMs),
+            '$(codex-local-meter) 42% 28m'
         );
     });
 
-    test('formats token usage without repeating the product name', () => {
-        const text = buildStatusBarText(
-            summary({ fiveHourTokens: 12400, sevenDayTokens: 30000 }),
-            baseSettings
+    test('uses Secondary only when Primary is unavailable or hidden', () => {
+        const secondary = { usedPercent: 18, windowMinutes: 10_080, resetsAt: new Date(nowMs + 3 * 24 * 3_600_000) };
+        assert.strictEqual(
+            buildStatusBarText(summary({ rateLimits: { secondary } }), baseSettings, nowMs),
+            '$(codex-local-meter) 18% 3d'
         );
-
-        assert.strictEqual(text, '$(codex-local-meter) 12.4k primary');
+        assert.strictEqual(
+            buildStatusBarText(summary({
+                rateLimits: { primary: { usedPercent: 42 }, secondary },
+            }), { ...baseSettings, showPrimaryUsage: false }, nowMs),
+            '$(codex-local-meter) 18% 3d'
+        );
     });
 
-    test('formats estimated message fallback without repeating the product name', () => {
-        const text = buildStatusBarText(
-            summary({ isEstimated: true, fiveHourMessages: 12, sevenDayMessages: 20 }),
-            baseSettings
-        );
+    test('uses Primary-only weekly data as Primary', () => {
+        const text = buildStatusBarText(summary({
+            rateLimits: { primary: { usedPercent: 88, windowMinutes: 10_080 } },
+        }), baseSettings, nowMs);
 
-        assert.strictEqual(text, '$(codex-local-meter) ~12 primary');
+        assert.strictEqual(text, '$(codex-local-meter) 88%');
+        assert.strictEqual(selectStatusBarUsagePercent(summary({
+            rateLimits: { primary: { usedPercent: 88, windowMinutes: 10_080 } },
+        }), baseSettings), 88);
     });
 
-    test('formats compact mode with the icon and value only', () => {
-        const text = buildStatusBarText(
-            summary({ fiveHourUsedPercent: 42.5 }),
-            { ...baseSettings, compactMode: true }
-        );
+    test('does not use hidden Secondary as a fallback', () => {
+        const text = buildStatusBarText(summary({
+            fiveHourTokens: 12_400,
+            rateLimits: { secondary: { usedPercent: 18 } },
+        }), { ...baseSettings, showSecondaryUsage: false });
 
-        assert.strictEqual(text, '$(codex-local-meter) 43%');
+        assert.strictEqual(text, '$(codex-local-meter) 12.4k 5h');
     });
 
-    test('formats weekly-only compact mode without the window suffix', () => {
-        const text = buildStatusBarText(
-            summary({ sevenDayUsedPercent: 18 }),
-            { ...baseSettings, compactMode: true }
+    test('formats local activity fallback separately from rate-limit identities', () => {
+        assert.strictEqual(
+            buildStatusBarText(summary({ fiveHourTokens: 12_400, sevenDayTokens: 30_000 }), baseSettings),
+            '$(codex-local-meter) 12.4k 5h'
         );
-
-        assert.strictEqual(text, '$(codex-local-meter) 18%');
+        assert.strictEqual(
+            buildStatusBarText(summary({ isEstimated: true, fiveHourMessages: 12 }), baseSettings),
+            '$(codex-local-meter) ~12 5h'
+        );
     });
 
-    test('formats no-data state quietly', () => {
-        const text = buildStatusBarText(
-            summary({ sessionCount: 0, isEstimated: true }),
-            baseSettings
+    test('formats compact mode and the no-data state', () => {
+        assert.strictEqual(
+            buildStatusBarText(summary({ rateLimits: { primary: { usedPercent: 42.5 } } }), { ...baseSettings, compactMode: true }),
+            '$(codex-local-meter) 43%'
         );
-
-        assert.strictEqual(text, '$(codex-local-meter) --');
+        assert.strictEqual(
+            buildStatusBarText(summary({ sessionCount: 0, isEstimated: true }), baseSettings),
+            '$(codex-local-meter) --'
+        );
     });
 });

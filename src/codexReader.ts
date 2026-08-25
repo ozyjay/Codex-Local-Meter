@@ -8,14 +8,22 @@ export interface RawEvent {
     inputTokens?: number;
     outputTokens?: number;
     messageCount?: number;
-    /** 5-hour rate-limit used %, classified from payload.rate_limits.*.window_minutes. */
-    fiveHourUsedPercent?: number;
-    /** 7-day rate-limit used %, classified from payload.rate_limits.*.window_minutes. */
-    sevenDayUsedPercent?: number;
-    /** 5-hour rate-limit reset timestamp. */
-    fiveHourResetsAt?: Date;
-    /** 7-day rate-limit reset timestamp. */
-    sevenDayResetsAt?: Date;
+    /**
+     * A rate-limit snapshot reported directly by Codex. The keys are identities;
+     * windowMinutes is descriptive metadata and must not be used to swap them.
+     */
+    rateLimits?: RateLimits;
+}
+
+export interface RateLimitWindow {
+    usedPercent?: number;
+    resetsAt?: Date;
+    windowMinutes?: number;
+}
+
+export interface RateLimits {
+    primary?: RateLimitWindow;
+    secondary?: RateLimitWindow;
 }
 
 interface ReadResult {
@@ -205,7 +213,7 @@ function extractCodexDesktopEvent(
             timestamp: ts,
             inputTokens,
             outputTokens,
-            ...rateLimits,
+            rateLimits,
         };
     }
 
@@ -218,106 +226,33 @@ function extractCodexDesktopEvent(
     return undefined;
 }
 
-interface ParsedRateLimitWindow {
-    usedPercent?: number;
-    resetsAt?: Date;
-    windowMinutes?: number;
-}
-
-type RateLimitKind = 'fiveHour' | 'sevenDay';
-
-const FIVE_HOUR_WINDOW_MINUTES = 300;
-const SEVEN_DAY_WINDOW_MINUTES = 10_080;
-const WINDOW_MINUTES_TOLERANCE = 5;
-
-function extractRateLimits(rateLimits: unknown): Pick<RawEvent,
-    'fiveHourUsedPercent' | 'sevenDayUsedPercent' | 'fiveHourResetsAt' | 'sevenDayResetsAt'> {
-    const result: Pick<RawEvent,
-        'fiveHourUsedPercent' | 'sevenDayUsedPercent' | 'fiveHourResetsAt' | 'sevenDayResetsAt'> = {};
-
+function extractRateLimits(rateLimits: unknown): RateLimits | undefined {
     if (typeof rateLimits !== 'object' || rateLimits === null) {
-        return result;
+        return undefined;
     }
 
     const record = rateLimits as Record<string, unknown>;
-    const primary = parseRateLimitWindow(record['primary']);
-    const secondary = parseRateLimitWindow(record['secondary']);
-    const primaryKind = classifyRateLimitWindow(primary?.windowMinutes);
-    const secondaryKind = classifyRateLimitWindow(secondary?.windowMinutes);
-    const primaryMissingDuration = primary?.windowMinutes === undefined;
-    const secondaryMissingDuration = secondary?.windowMinutes === undefined;
-
-    assignRateLimitWindow(result, primary, primaryKind);
-    assignRateLimitWindow(result, secondary, secondaryKind);
-
-    // Older Codex records used positional semantics and did not always include
-    // window_minutes. Only infer a missing duration when both windows exist,
-    // avoiding guesses for the newer single-window schema.
-    if (primary && secondary) {
-        if (primaryMissingDuration && secondaryMissingDuration) {
-            assignRateLimitWindow(result, primary, 'fiveHour');
-            assignRateLimitWindow(result, secondary, 'sevenDay');
-        } else if (primaryMissingDuration && secondaryKind === 'sevenDay') {
-            assignRateLimitWindow(result, primary, 'fiveHour');
-        } else if (primaryMissingDuration && secondaryKind === 'fiveHour') {
-            assignRateLimitWindow(result, primary, 'sevenDay');
-        } else if (secondaryMissingDuration && primaryKind === 'fiveHour') {
-            assignRateLimitWindow(result, secondary, 'sevenDay');
-        } else if (secondaryMissingDuration && primaryKind === 'sevenDay') {
-            assignRateLimitWindow(result, secondary, 'fiveHour');
-        }
-    }
-
-    return result;
+    return {
+        primary: parseRateLimitWindow(record['primary']),
+        secondary: parseRateLimitWindow(record['secondary']),
+    };
 }
 
-function parseRateLimitWindow(value: unknown): ParsedRateLimitWindow | undefined {
+function parseRateLimitWindow(value: unknown): RateLimitWindow | undefined {
     if (typeof value !== 'object' || value === null) {
         return undefined;
     }
 
     const record = value as Record<string, unknown>;
-    const usedPercent = resolveNumber(record, 'used_percent');
+    const usedPercent = resolvePercent(record, 'used_percent');
     const resetsAt = resolveUnixSecondsDate(record, 'resets_at');
-    const windowMinutes = resolveNumber(record, 'window_minutes');
+    const windowMinutes = resolvePositiveNumber(record, 'window_minutes');
 
-    if (usedPercent === undefined && resetsAt === undefined) {
+    if (usedPercent === undefined && resetsAt === undefined && windowMinutes === undefined) {
         return undefined;
     }
 
     return { usedPercent, resetsAt, windowMinutes };
-}
-
-function classifyRateLimitWindow(windowMinutes: number | undefined): RateLimitKind | undefined {
-    if (windowMinutes === undefined) {
-        return undefined;
-    }
-    if (Math.abs(windowMinutes - FIVE_HOUR_WINDOW_MINUTES) <= WINDOW_MINUTES_TOLERANCE) {
-        return 'fiveHour';
-    }
-    if (Math.abs(windowMinutes - SEVEN_DAY_WINDOW_MINUTES) <= WINDOW_MINUTES_TOLERANCE) {
-        return 'sevenDay';
-    }
-    return undefined;
-}
-
-function assignRateLimitWindow(
-    target: Pick<RawEvent,
-        'fiveHourUsedPercent' | 'sevenDayUsedPercent' | 'fiveHourResetsAt' | 'sevenDayResetsAt'>,
-    window: ParsedRateLimitWindow | undefined,
-    kind: RateLimitKind | undefined
-): void {
-    if (!window || !kind) {
-        return;
-    }
-
-    if (kind === 'fiveHour') {
-        target.fiveHourUsedPercent = window.usedPercent;
-        target.fiveHourResetsAt = window.resetsAt;
-    } else {
-        target.sevenDayUsedPercent = window.usedPercent;
-        target.sevenDayResetsAt = window.resetsAt;
-    }
 }
 
 function resolveTimestamp(r: Record<string, unknown>): Date | undefined {
@@ -335,7 +270,17 @@ function resolveTimestamp(r: Record<string, unknown>): Date | undefined {
 
 function resolveNumber(r: Record<string, unknown>, key: string): number | undefined {
     const val = r[key];
-    return typeof val === 'number' ? val : undefined;
+    return typeof val === 'number' && Number.isFinite(val) ? val : undefined;
+}
+
+function resolvePercent(r: Record<string, unknown>, key: string): number | undefined {
+    const value = resolveNumber(r, key);
+    return value !== undefined && value >= 0 && value <= 100 ? value : undefined;
+}
+
+function resolvePositiveNumber(r: Record<string, unknown>, key: string): number | undefined {
+    const value = resolveNumber(r, key);
+    return value !== undefined && value > 0 ? value : undefined;
 }
 
 function resolveUnixSecondsDate(r: Record<string, unknown>, key: string): Date | undefined {

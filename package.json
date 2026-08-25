@@ -86,15 +86,25 @@
           "minimum": 30,
           "description": "How often to re-read Codex files (seconds). Minimum 30."
         },
-        "codexLocalMeter.showFiveHourUsage": {
+        "codexLocalMeter.showPrimaryUsage": {
           "type": "boolean",
           "default": true,
           "description": "Show available primary usage in the status bar."
         },
-        "codexLocalMeter.showWeeklyUsage": {
+        "codexLocalMeter.showSecondaryUsage": {
           "type": "boolean",
           "default": true,
           "description": "Show available secondary usage in the tooltip and status bar."
+        },
+        "codexLocalMeter.showFiveHourUsage": {
+          "type": "boolean",
+          "default": true,
+          "markdownDeprecationMessage": "Deprecated. Use `codexLocalMeter.showPrimaryUsage` instead. Existing explicit values are still honored when the new setting is unset."
+        },
+        "codexLocalMeter.showWeeklyUsage": {
+          "type": "boolean",
+          "default": true,
+          "markdownDeprecationMessage": "Deprecated. Use `codexLocalMeter.showSecondaryUsage` instead. Existing explicit values are still honored when the new setting is unset."
         },
         "codexLocalMeter.warningThresholdPercent": {
           "type": "number",
@@ -113,7 +123,7 @@
         "codexLocalMeter.compactMode": {
           "type": "boolean",
           "default": false,
-          "description": "Hide primary and message suffixes in status-bar fallback text (e.g. '12.4k' instead of '12.4k primary')."
+          "description": "Hide 5-hour activity and message suffixes in status-bar fallback text (e.g. '12.4k' instead of '12.4k 5h')."
         }
       }
     }

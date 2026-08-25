@@ -1,8 +1,8 @@
 import { Settings } from './settingsManager';
+import { RateLimitWindow } from './codexReader';
 import { UsageSummary, formatPercent, formatTokens } from './usageCalculator';
 
 const statusBarIcon = '$(codex-local-meter)';
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function buildStatusBarText(
     summary: UsageSummary,
@@ -27,63 +27,66 @@ export function selectStatusBarUsagePercent(
     summary: UsageSummary,
     settings: Settings
 ): number | undefined {
-    if (settings.showFiveHourUsage && summary.fiveHourUsedPercent !== undefined) {
-        return summary.fiveHourUsedPercent;
-    }
-    if (settings.showWeeklyUsage && summary.sevenDayUsedPercent !== undefined) {
-        return summary.sevenDayUsedPercent;
-    }
-    return undefined;
+    return selectStatusBarRateLimit(summary, settings)?.usedPercent;
 }
 
 function buildFullText(summary: UsageSummary, settings: Settings, nowMs: number): string {
     const icon = statusBarIcon;
-    const daysLeft = settings.showWeeklyUsage
-        ? formatDaysLeft(summary.sevenDayResetsAt, nowMs)
-        : undefined;
-    const daysSuffix = daysLeft === undefined ? '' : ` ${daysLeft}d`;
-
-    if (settings.showFiveHourUsage && summary.fiveHourUsedPercent !== undefined) {
-        return `${icon} ${formatPercent(summary.fiveHourUsedPercent)}%${daysSuffix}`;
+    const rateLimit = selectStatusBarRateLimit(summary, settings);
+    if (rateLimit?.usedPercent !== undefined) {
+        const resetSuffix = formatResetSuffix(rateLimit.resetsAt, nowMs);
+        return `${icon} ${formatPercent(rateLimit.usedPercent)}%${resetSuffix}`;
     }
 
-    if (settings.showWeeklyUsage && summary.sevenDayUsedPercent !== undefined) {
-        return `${icon} ${formatPercent(summary.sevenDayUsedPercent)}%${daysSuffix}`;
-    }
-
-    if (!settings.showFiveHourUsage) {
+    if (!settings.showPrimaryUsage) {
         return icon;
     }
 
     if (summary.isEstimated) {
         const msgs = summary.fiveHourMessages ?? 0;
-        return `${icon} ~${msgs} primary`;
+        return `${icon} ~${msgs} 5h`;
     }
 
     const tokens = summary.fiveHourTokens ?? 0;
     const formatted = formatTokens(tokens) ?? '0';
-    return `${icon} ${formatted} primary`;
+    return `${icon} ${formatted} 5h`;
 }
 
-function formatDaysLeft(resetsAt: Date | undefined, nowMs: number): number | undefined {
+function selectStatusBarRateLimit(summary: UsageSummary, settings: Settings): RateLimitWindow | undefined {
+    if (settings.showPrimaryUsage && summary.rateLimits.primary?.usedPercent !== undefined) {
+        return summary.rateLimits.primary;
+    }
+    if (settings.showSecondaryUsage && summary.rateLimits.secondary?.usedPercent !== undefined) {
+        return summary.rateLimits.secondary;
+    }
+    return undefined;
+}
+
+function formatResetSuffix(resetsAt: Date | undefined, nowMs: number): string {
     const resetMs = resetsAt?.getTime();
     if (resetMs === undefined || !Number.isFinite(resetMs) || resetMs <= nowMs) {
-        return undefined;
+        return '';
     }
 
-    return Math.ceil((resetMs - nowMs) / DAY_MS);
+    const minutes = Math.ceil((resetMs - nowMs) / 60_000);
+    if (minutes < 60) {
+        return ` ${minutes}m`;
+    }
+    const hours = Math.ceil(minutes / 60);
+    if (hours < 24) {
+        return ` ${hours}h`;
+    }
+    return ` ${Math.ceil(hours / 24)}d`;
 }
 
 function buildCompactText(summary: UsageSummary, settings: Settings): string {
     const icon = statusBarIcon;
 
-    if (settings.showFiveHourUsage && summary.fiveHourUsedPercent !== undefined) {
-        return `${icon} ${formatPercent(summary.fiveHourUsedPercent)}%`;
+    const rateLimit = selectStatusBarRateLimit(summary, settings);
+    if (rateLimit?.usedPercent !== undefined) {
+        return `${icon} ${formatPercent(rateLimit.usedPercent)}%`;
     }
-    if (settings.showWeeklyUsage && summary.sevenDayUsedPercent !== undefined) {
-        return `${icon} ${formatPercent(summary.sevenDayUsedPercent)}%`;
-    }
-    if (!settings.showFiveHourUsage) {
+    if (!settings.showPrimaryUsage) {
         return icon;
     }
     if (summary.isEstimated) {

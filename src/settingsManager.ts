@@ -5,8 +5,8 @@ import * as vscode from 'vscode';
 export interface Settings {
     codexPath: string;
     refreshIntervalSeconds: number;
-    showFiveHourUsage: boolean;
-    showWeeklyUsage: boolean;
+    showPrimaryUsage: boolean;
+    showSecondaryUsage: boolean;
     warningThresholdPercent: number;
     dangerThresholdPercent: number;
     compactMode: boolean;
@@ -28,12 +28,50 @@ export function getSettings(): Settings {
     return {
         codexPath,
         refreshIntervalSeconds: Math.max(30, cfg.get<number>('refreshIntervalSeconds', 300)),
-        showFiveHourUsage: cfg.get<boolean>('showFiveHourUsage', true),
-        showWeeklyUsage: cfg.get<boolean>('showWeeklyUsage', true),
+        showPrimaryUsage: resolveBooleanSetting(cfg, 'showPrimaryUsage', 'showFiveHourUsage', true),
+        showSecondaryUsage: resolveBooleanSetting(cfg, 'showSecondaryUsage', 'showWeeklyUsage', true),
         warningThresholdPercent,
         dangerThresholdPercent,
         compactMode: cfg.get<boolean>('compactMode', false),
     };
+}
+
+/**
+ * New setting values take precedence. Until users explicitly set a replacement,
+ * preserve the effective value of the deprecated setting without modifying their
+ * global or workspace configuration.
+ */
+export function resolveBooleanSetting(
+    configuration: vscode.WorkspaceConfiguration,
+    currentKey: string,
+    legacyKey: string,
+    defaultValue: boolean
+): boolean {
+    if (hasExplicitValue(configuration.inspect<boolean>(currentKey))) {
+        return configuration.get<boolean>(currentKey, defaultValue);
+    }
+    if (hasExplicitValue(configuration.inspect<boolean>(legacyKey))) {
+        return configuration.get<boolean>(legacyKey, defaultValue);
+    }
+    return defaultValue;
+}
+
+interface ConfigurationInspection<T> {
+    globalValue?: T;
+    workspaceValue?: T;
+    workspaceFolderValue?: T;
+    globalLanguageValue?: T;
+    workspaceLanguageValue?: T;
+    workspaceFolderLanguageValue?: T;
+}
+
+function hasExplicitValue<T>(inspection: ConfigurationInspection<T> | undefined): boolean {
+    return inspection?.globalValue !== undefined
+        || inspection?.workspaceValue !== undefined
+        || inspection?.workspaceFolderValue !== undefined
+        || inspection?.globalLanguageValue !== undefined
+        || inspection?.workspaceLanguageValue !== undefined
+        || inspection?.workspaceFolderLanguageValue !== undefined;
 }
 
 function clamp(value: number, min: number, max: number): number {

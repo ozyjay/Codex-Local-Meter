@@ -1,15 +1,17 @@
+import { RateLimitWindow } from './codexReader';
 import { UsageSummary, formatPercent, formatRelativeTime } from './usageCalculator';
 
 export interface TooltipOptions {
     warningThresholdPercent: number;
     dangerThresholdPercent: number;
-    showWeeklyUsage?: boolean;
+    showSecondaryUsage?: boolean;
 }
 
 interface Ring {
     label: string;
-    percent: number;
+    usedPercent?: number;
     resetsAt: Date | undefined;
+    windowMinutes: number | undefined;
     colour: string;
 }
 
@@ -22,26 +24,24 @@ export function buildTooltipDashboardDataUri(
 ): string {
     const rings: Ring[] = [];
 
-    if (summary.fiveHourUsedPercent !== undefined) {
+    if (summary.rateLimits.primary !== undefined) {
         rings.push({
-            label: 'Primary limit',
-            percent: summary.fiveHourUsedPercent,
-            resetsAt: summary.fiveHourResetsAt,
+            label: 'Primary',
+            ...toRing(summary.rateLimits.primary),
             colour: '#f1f1ef',
         });
     }
 
-    if (options.showWeeklyUsage !== false && summary.sevenDayUsedPercent !== undefined) {
+    if (options.showSecondaryUsage !== false && summary.rateLimits.secondary !== undefined) {
         rings.push({
-            label: 'Secondary limit',
-            percent: summary.sevenDayUsedPercent,
-            resetsAt: summary.sevenDayResetsAt,
+            label: 'Secondary',
+            ...toRing(summary.rateLimits.secondary),
             colour: '#ff8a1d',
         });
     }
 
     const panelStartY = 62;
-    const panelHeight = 104;
+    const panelHeight = 122;
     const panelGap = 10;
     const contentHeight = rings.length > 0
         ? rings.length * (panelHeight + panelGap)
@@ -69,23 +69,25 @@ export function buildTooltipDashboardDataUri(
 }
 
 function panel(x: number, y: number, ring: Ring): string {
-    const percent = clampPercent(ring.percent);
+    const percent = ring.usedPercent === undefined ? 0 : clampPercent(ring.usedPercent);
     const dash = circumference * percent / 100;
     const resetText = ring.resetsAt === undefined
         ? 'Reset time not found'
         : `Resets in ${formatReset(ring.resetsAt)}`;
-    const statusText = `${formatPercent(ring.percent)}% used`;
+    const statusText = ring.usedPercent === undefined ? 'Usage not reported' : `${formatPercent(ring.usedPercent)}% used`;
+    const durationText = formatDurationLabel(ring.windowMinutes);
     const infoX = x + 112;
 
     return `<g>
     <rect x="${x}" y="${y}" width="376" height="104" rx="8" fill="#1b1d1f"/>
     <circle cx="${x + 54}" cy="${y + 52}" r="35" fill="none" stroke="#343638" stroke-width="9"/>
     <circle cx="${x + 54}" cy="${y + 52}" r="35" fill="none" stroke="${ring.colour}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circumference.toFixed(2)}" transform="rotate(-90 ${x + 54} ${y + 52})"/>
-    <text x="${x + 54}" y="${y + 49}" fill="${ring.colour}" font-family="${fontFamily}" font-size="18" font-weight="800" text-anchor="middle">${escapeSvg(percentLabel(ring.percent))}</text>
+    <text x="${x + 54}" y="${y + 49}" fill="${ring.colour}" font-family="${fontFamily}" font-size="18" font-weight="800" text-anchor="middle">${escapeSvg(percentLabel(ring.usedPercent))}</text>
     <text x="${x + 54}" y="${y + 65}" fill="#9da19b" font-family="${fontFamily}" font-size="9" font-weight="700" text-anchor="middle">USED</text>
-    <text x="${infoX}" y="${y + 37}" fill="#f4f4f2" font-family="${fontFamily}" font-size="14" font-weight="800">${escapeSvg(ring.label)}</text>
-    <text x="${infoX}" y="${y + 59}" fill="#c3c4c5" font-family="${fontFamily}" font-size="12">${escapeSvg(statusText)}</text>
-    <text x="${infoX}" y="${y + 79}" fill="#9a9d9f" font-family="${fontFamily}" font-size="11">${escapeSvg(resetText)}</text>
+    <text x="${infoX}" y="${y + 31}" fill="#f4f4f2" font-family="${fontFamily}" font-size="14" font-weight="800">${escapeSvg(ring.label)}</text>
+    <text x="${infoX}" y="${y + 53}" fill="#c3c4c5" font-family="${fontFamily}" font-size="12">${escapeSvg(statusText)}</text>
+    <text x="${infoX}" y="${y + 74}" fill="#9a9d9f" font-family="${fontFamily}" font-size="11">${escapeSvg(durationText)}</text>
+    <text x="${infoX}" y="${y + 96}" fill="#9a9d9f" font-family="${fontFamily}" font-size="11">${escapeSvg(resetText)}</text>
   </g>`;
 }
 
@@ -119,7 +121,13 @@ function usageState(rings: Ring[], thresholds: TooltipOptions): string {
         return 'Unavailable';
     }
 
-    const highest = Math.max(...rings.map(ring => ring.percent));
+    const reportedPercentages = rings
+        .map(ring => ring.usedPercent)
+        .filter((percent): percent is number => percent !== undefined);
+    if (reportedPercentages.length === 0) {
+        return 'Unavailable';
+    }
+    const highest = Math.max(...reportedPercentages);
     if (highest >= thresholds.dangerThresholdPercent) {
         return 'Danger';
     }
@@ -133,8 +141,37 @@ function clampPercent(percent: number): number {
     return Math.max(0, Math.min(100, Math.round(percent)));
 }
 
-function percentLabel(percent: number): string {
-    return `${formatPercent(percent)}%`;
+function percentLabel(percent: number | undefined): string {
+    return percent === undefined ? '—' : `${formatPercent(percent)}%`;
+}
+
+function toRing(window: RateLimitWindow): Omit<Ring, 'label' | 'colour'> {
+    return {
+        usedPercent: window.usedPercent,
+        resetsAt: window.resetsAt,
+        windowMinutes: window.windowMinutes,
+    };
+}
+
+export function formatDurationLabel(windowMinutes: number | undefined): string {
+    if (windowMinutes === undefined) {
+        return 'Duration not reported';
+    }
+    if (windowMinutes === 300) {
+        return '5-hour limit';
+    }
+    if (windowMinutes === 10_080) {
+        return 'Weekly limit';
+    }
+    if (windowMinutes % 1_440 === 0) {
+        const days = windowMinutes / 1_440;
+        return `${days}-day limit`;
+    }
+    if (windowMinutes % 60 === 0) {
+        const hours = windowMinutes / 60;
+        return `${hours}-hour limit`;
+    }
+    return `${windowMinutes}-minute limit`;
 }
 
 function formatReset(date: Date): string {

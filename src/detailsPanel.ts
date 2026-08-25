@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
+import { RateLimitWindow } from './codexReader';
 import { UsageSummary } from './usageCalculator';
 import { formatPercent, formatTokens, formatRelativeTime, formatRelativeFuture } from './usageCalculator';
+import { formatDurationLabel } from './statusBarTooltipArt';
 
 const VIEW_TYPE = 'codexLocalMeter.details';
 const TITLE = 'Codex Local Meter';
@@ -61,8 +63,11 @@ export class DetailsPanel implements vscode.Disposable {
 // ---------------------------------------------------------------------------
 
 export function buildDetailsHtml(summary: UsageSummary): string {
-    const hasRateLimitData = summary.fiveHourUsedPercent !== undefined
-        || summary.sevenDayUsedPercent !== undefined;
+    const rateLimitTiles = [
+        buildRateLimitTile('Primary', summary.rateLimits.primary),
+        buildRateLimitTile('Secondary', summary.rateLimits.secondary),
+    ].filter((tile): tile is string => tile !== undefined);
+    const hasRateLimitData = rateLimitTiles.length > 0;
     const hasTokenCounts = !summary.isEstimated;
 
     const dataState = hasRateLimitData
@@ -71,33 +76,21 @@ export function buildDetailsHtml(summary: UsageSummary): string {
         ? 'Local token counts'
         : 'Message-count estimate';
 
-    const fiveHourPrimary = summary.fiveHourUsedPercent !== undefined
-        ? `${formatPercent(summary.fiveHourUsedPercent)}% used`
-        : summary.isEstimated
+    const fiveHourActivity = summary.isEstimated
         ? `~${summary.fiveHourMessages ?? 0} messages`
         : `${formatTokens(summary.fiveHourTokens) ?? '0'} tokens`;
 
-    const sevenDayPrimary = summary.sevenDayUsedPercent !== undefined
-        ? `${formatPercent(summary.sevenDayUsedPercent)}% used`
-        : summary.isEstimated
+    const sevenDayActivity = summary.isEstimated
         ? `~${summary.sevenDayMessages ?? 0} messages`
         : `${formatTokens(summary.sevenDayTokens) ?? '0'} tokens`;
 
-    const fiveHourRemaining = formatRelativeFuture(summary.fiveHourResetsAt);
-    const sevenDayRemaining = formatRelativeFuture(summary.sevenDayResetsAt);
-
-    const fiveHourMeta = summary.fiveHourUsedPercent !== undefined
-        ? fiveHourRemaining ? `Resets in ${fiveHourRemaining}` : 'Reset time not found'
-        : summary.isEstimated ? 'Message-count estimate' : 'Local token count';
-    const sevenDayMeta = summary.sevenDayUsedPercent !== undefined
-        ? sevenDayRemaining ? `Resets in ${sevenDayRemaining}` : 'Reset time not found'
-        : summary.isEstimated ? 'Message-count estimate' : 'Local token count';
-    const fiveHourSupplement = summary.fiveHourUsedPercent !== undefined && hasTokenCounts
-        ? `${formatTokens(summary.fiveHourTokens) ?? '0'} local tokens`
-        : undefined;
-    const sevenDaySupplement = summary.sevenDayUsedPercent !== undefined && hasTokenCounts
-        ? `${formatTokens(summary.sevenDayTokens) ?? '0'} local tokens`
-        : undefined;
+    const activityMeta = summary.isEstimated ? 'Message-count estimate' : 'Local token count';
+    const meterContent = hasRateLimitData
+        ? rateLimitTiles.join('\n')
+        : [
+            metricTile('5-hour local activity', fiveHourActivity, activityMeta),
+            metricTile('7-day local activity', sevenDayActivity, activityMeta),
+        ].join('\n');
 
     const lastActivity = formatRelativeTime(summary.lastActivity);
     const lastActivityFull = summary.lastActivity
@@ -461,8 +454,7 @@ export function buildDetailsHtml(summary: UsageSummary): string {
       </div>
 
       <div class="meter-grid">
-        ${metricTile('Primary', fiveHourPrimary, fiveHourMeta, summary.fiveHourUsedPercent, fiveHourSupplement)}
-        ${metricTile('Secondary', sevenDayPrimary, sevenDayMeta, summary.sevenDayUsedPercent, sevenDaySupplement)}
+        ${meterContent}
       </div>
 
       <div class="context-grid">
@@ -500,6 +492,23 @@ export function buildDetailsHtml(summary: UsageSummary): string {
   </main>
 </body>
 </html>`;
+}
+
+function buildRateLimitTile(label: string, window: RateLimitWindow | undefined): string | undefined {
+    if (window === undefined) {
+        return undefined;
+    }
+
+    const value = window.usedPercent === undefined
+        ? 'Usage not reported'
+        : `${formatPercent(window.usedPercent)}% used`;
+    const reset = formatRelativeFuture(window.resetsAt);
+    const duration = formatDurationLabel(window.windowMinutes);
+    const meta = reset === undefined
+        ? `${duration} · Reset time not found`
+        : `${duration} · Resets in ${reset}`;
+
+    return metricTile(label, value, meta, window.usedPercent);
 }
 
 function metricTile(

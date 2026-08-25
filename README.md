@@ -32,10 +32,10 @@ The meter icon appears before each value. Example text:
 
 | State | Example |
 | --- | --- |
-| Primary rate-limit data with a secondary reset in five days | `42% 5d` |
-| Secondary rate-limit fallback with a reset in three days | `18% 3d` |
-| Token counts found | `12.4k primary` |
-| Message-count fallback | `~12 primary` |
+| Primary rate-limit data resetting in five days | `42% 5d` |
+| Secondary rate-limit fallback resetting in three days | `18% 3d` |
+| Token counts found | `12.4k 5h` |
+| Message-count fallback | `~12 5h` |
 | No local data yet | `--` |
 | Compact token count | `12.4k` |
 
@@ -43,9 +43,9 @@ The status bar text changes color when usage reaches the configured warning or d
 
 ### Hover Tooltip
 
-The status bar tooltip shows a rate-limit card only when that limit was found in local Codex data. For example, if only the secondary limit is available, the tooltip shows only the secondary card. It does not display an empty or "unknown" primary card.
+The status bar tooltip shows a rate-limit card only when Codex reports that limit locally. For example, if only Primary is available, it shows only the Primary card. The card shows the duration Codex reported, such as **5-hour limit**, **Weekly limit**, or a generic duration for unfamiliar values.
 
-When neither rate limit is available, the tooltip shows one compact unavailable state and links to the details panel, where local token or message-count activity can still be viewed. The secondary tooltip card also respects the `showWeeklyUsage` setting.
+When neither rate limit is available, the tooltip shows one compact unavailable state and links to the details panel, where local token or message-count activity can still be viewed. The secondary tooltip card also respects the `showSecondaryUsage` setting.
 
 ## Details Panel
 
@@ -53,8 +53,8 @@ Run **Codex Local Meter: Open Status** or click the status bar item to open the 
 
 The panel shows:
 
-- Primary activity or rate-limit usage.
-- Secondary activity or rate-limit usage.
+- Primary and Secondary rate-limit usage when Codex reports them.
+- Clearly labelled 5-hour and 7-day local activity estimates when no rate limit is reported.
 - Last detected Codex activity.
 - Number of recently seen sessions.
 - Model names detected in local metadata.
@@ -83,15 +83,19 @@ All settings are under `codexLocalMeter.*`.
 | --- | --- | --- |
 | `codexPath` | `""` | Override the Codex data directory. Empty means `~/.codex`. |
 | `refreshIntervalSeconds` | `300` | How often to re-read local Codex files. Minimum 30 seconds. |
-| `showFiveHourUsage` | `true` | Show available primary usage in the status bar. |
-| `showWeeklyUsage` | `true` | Show available secondary usage in the tooltip and status bar. |
+| `showPrimaryUsage` | `true` | Show available Primary usage in the status bar. |
+| `showSecondaryUsage` | `true` | Show available Secondary usage in the tooltip and status bar. |
+| `showFiveHourUsage` | `true` | Deprecated alias for `showPrimaryUsage`; existing explicit values remain effective while the replacement is unset. |
+| `showWeeklyUsage` | `true` | Deprecated alias for `showSecondaryUsage`; existing explicit values remain effective while the replacement is unset. |
 | `warningThresholdPercent` | `70` | Show warning colors at or above this percentage. |
 | `dangerThresholdPercent` | `90` | Show danger colors at or above this percentage. |
-| `compactMode` | `false` | Hide primary and message suffixes in status-bar fallback text, such as `12.4k` instead of `12.4k primary`. |
+| `compactMode` | `false` | Hide activity and message suffixes in status-bar fallback text, such as `12.4k` instead of `12.4k 5h`. |
 
 ## How Usage Is Estimated
 
-Codex Local Meter scans local Codex JSONL session files and looks for usage-relevant records. When local rate-limit percentages are present, those values are shown first as primary and secondary limits. Codex may store either limit under either the `primary` or `secondary` field, so the extension identifies the limits by their reported duration rather than trusting a field name. When token counts are present, token totals are shown. When neither is available, the extension falls back to message counts and marks the result as an estimate.
+Codex Local Meter scans local Codex JSONL session files and looks for usage-relevant records. When local rate-limit data is present, it preserves the `primary` and `secondary` identities Codex reports. Each limit has its own optional duration from `window_minutes`; the extension does not infer a limit's identity from that duration. Current Codex configurations may expose only a Primary weekly limit.
+
+Token and message counts are separate local activity estimates over fixed 5-hour and 7-day periods. They are not treated as Primary or Secondary limits. When neither token counts nor rate-limit data are available, the extension falls back to message counts and marks the result as an estimate.
 
 The extension supports the available primary limit without assuming it is always present. Unavailable rate-limit cards are omitted from the hover tooltip.
 

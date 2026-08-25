@@ -9,6 +9,7 @@ function summary(overrides: Partial<UsageSummary>): UsageSummary {
         sessionCount: 4,
         modelNames: ['gpt-5'],
         parseErrors: [],
+        rateLimits: {},
         ...overrides,
     };
 }
@@ -18,23 +19,42 @@ function occurrences(value: string, search: string): number {
 }
 
 suite('detailsPanel - buildDetailsHtml()', () => {
-    test('renders each usage window once without a repeated usage headline or rows', () => {
+    test('renders Primary-only weekly data as Primary and omits Secondary', () => {
+        const html = buildDetailsHtml(summary({
+            rateLimits: { primary: { usedPercent: 37, windowMinutes: 10_080 } },
+        }));
+
+        assert.strictEqual(occurrences(html, 'metric-label">Primary'), 1);
+        assert.strictEqual(occurrences(html, 'metric-label">Secondary'), 0);
+        assert.ok(html.includes('37% <span>used</span>'));
+        assert.ok(html.includes('Weekly limit'));
+        assert.ok(html.includes('Local rate-limit data'));
+    });
+
+    test('renders both reported limits with their own durations', () => {
+        const html = buildDetailsHtml(summary({
+            rateLimits: {
+                primary: { usedPercent: 18, windowMinutes: 300 },
+                secondary: { usedPercent: 42, windowMinutes: 10_080 },
+            },
+        }));
+
+        assert.strictEqual(occurrences(html, 'metric-label">Primary'), 1);
+        assert.strictEqual(occurrences(html, 'metric-label">Secondary'), 1);
+        assert.ok(html.includes('5-hour limit'));
+        assert.ok(html.includes('Weekly limit'));
+    });
+
+    test('labels fallback values as local activity rather than Primary or Secondary', () => {
         const html = buildDetailsHtml(summary({
             fiveHourTokens: 6_900_000,
             sevenDayTokens: 20_000_000,
-            sevenDayUsedPercent: 5,
         }));
 
-        assert.ok(html.includes('Usage windows'));
-        assert.strictEqual(occurrences(html, 'metric-label">Primary'), 1);
-        assert.strictEqual(occurrences(html, 'metric-label">Secondary'), 1);
+        assert.ok(html.includes('metric-label">5-hour local activity'));
+        assert.ok(html.includes('metric-label">7-day local activity'));
+        assert.ok(!html.includes('metric-label">Primary'));
         assert.ok(html.includes('6.9M <span>tokens</span>'));
-        assert.ok(html.includes('5% <span>used</span>'));
-        assert.ok(html.includes('20.0M local tokens'));
-        assert.ok(html.includes('Local rate-limit data'));
-        assert.ok(!html.includes('Current usage'));
-        assert.ok(!html.includes('5-hour tokens</div>'));
-        assert.ok(!html.includes('7-day rate limit</div>'));
     });
 
     test('escapes privacy-safe dynamic metadata', () => {

@@ -1,7 +1,9 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { RateLimitWindow } from './codexReader';
 import { UsageSummary } from './usageCalculator';
 import { formatRelativeTime, formatRelativeFuture } from './usageCalculator';
+import { formatDurationLabel } from './statusBarTooltipArt';
 
 /**
  * Writes a human-readable diagnostics report to the output channel and reveals it.
@@ -32,19 +34,22 @@ export async function showDiagnostics(
     }
     lines.push('');
 
-    // Usage summary
-    lines.push('USAGE (estimates)');
+    lines.push('RATE LIMITS');
+    appendRateLimit(lines, 'Primary', summary.rateLimits.primary);
+    appendRateLimit(lines, 'Secondary', summary.rateLimits.secondary);
+    lines.push('');
+
+    // Local activity summary
+    lines.push('LOCAL ACTIVITY (estimates)');
     lines.push(`  Recent sessions : ${summary.sessionCount}`);
     lines.push(`  Token counts    : ${summary.isEstimated ? 'NOT FOUND — using message counts' : 'found'}`);
     if (summary.isEstimated) {
-        lines.push(`  Primary messages   : ~${summary.fiveHourMessages ?? 0}`);
-        lines.push(`  Secondary messages : ~${summary.sevenDayMessages ?? 0}`);
+        lines.push(`  5-hour messages : ~${summary.fiveHourMessages ?? 0}`);
+        lines.push(`  7-day messages  : ~${summary.sevenDayMessages ?? 0}`);
     } else {
-        lines.push(`  Primary tokens   : ${summary.fiveHourTokens ?? 0}`);
-        lines.push(`  Secondary tokens : ${summary.sevenDayTokens ?? 0}`);
+        lines.push(`  5-hour tokens : ${summary.fiveHourTokens ?? 0}`);
+        lines.push(`  7-day tokens  : ${summary.sevenDayTokens ?? 0}`);
     }
-    lines.push(`  Primary reset    : ${formatReset(summary.fiveHourResetsAt)}`);
-    lines.push(`  Secondary reset  : ${formatReset(summary.sevenDayResetsAt)}`);
     lines.push(`  Last activity   : ${formatRelativeTime(summary.lastActivity)}`);
     lines.push(`  Models detected : ${summary.modelNames.length > 0 ? summary.modelNames.join(', ') : '(none)'}`);
     lines.push('');
@@ -73,6 +78,20 @@ export async function showDiagnostics(
         outputChannel.appendLine(line);
     }
     outputChannel.show(true /* preserveFocus */);
+}
+
+function appendRateLimit(lines: string[], label: string, window: RateLimitWindow | undefined): void {
+    if (window === undefined) {
+        lines.push(`  ${label}: not reported`);
+        return;
+    }
+
+    lines.push(`  ${label}:`);
+    lines.push(`    Used    : ${window.usedPercent === undefined ? 'not reported' : `${window.usedPercent}%`}`);
+    lines.push(`    Window  : ${window.windowMinutes === undefined
+        ? 'not reported'
+        : `${window.windowMinutes} min (${formatDurationLabel(window.windowMinutes)})`}`);
+    lines.push(`    Resets  : ${formatReset(window.resetsAt)}`);
 }
 
 function formatReset(date: Date | undefined): string {

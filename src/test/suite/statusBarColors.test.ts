@@ -9,8 +9,8 @@ import {
 const baseSettings: Settings = {
     codexPath: '/fake/.codex',
     refreshIntervalSeconds: 300,
-    showFiveHourUsage: true,
-    showWeeklyUsage: true,
+    showPrimaryUsage: true,
+    showSecondaryUsage: true,
     warningThresholdPercent: 70,
     dangerThresholdPercent: 90,
     compactMode: false,

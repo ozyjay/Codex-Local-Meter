@@ -57,7 +57,7 @@ function buildTooltip(summary: UsageSummary, settings: Settings): vscode.Markdow
     const dashboardUri = buildTooltipDashboardDataUri(summary, {
         warningThresholdPercent: settings.warningThresholdPercent,
         dangerThresholdPercent: settings.dangerThresholdPercent,
-        showWeeklyUsage: settings.showWeeklyUsage,
+        showSecondaryUsage: settings.showSecondaryUsage,
     });
 
     md.appendMarkdown(`![Codex Local Meter rate-limit dashboard](${dashboardUri})\n\n`);
@@ -77,7 +77,7 @@ function buildTooltip(summary: UsageSummary, settings: Settings): vscode.Markdow
 
 /**
  * Derives a 0–100 "usage percent" for color threshold purposes.
- * Prefers the authoritative window shown in the status text. When token counts
+ * Prefers the authoritative limit shown in the status text. When token counts
  * are available, the fallback uses the 5-hour window scaled to a rolling peak.
  * Falls back to message-count ratio when no tokens are present.
  * Returns undefined if there is no data to compare.
