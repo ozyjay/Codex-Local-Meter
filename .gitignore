@@ -2,5 +2,6 @@ out/
 node_modules/
 *.vsix
 .vscode-test/
+.test-out/
 images/icon.png
 images/codex-local-meter.woff

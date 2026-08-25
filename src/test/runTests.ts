@@ -1,14 +1,6 @@
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
 
-export function quoteShellArgForWindows(value: string): string {
-    return `"${value.replace(/"/g, '\\"')}"`;
-}
-
-function formatPathForVSCodeTestRunner(value: string): string {
-    return process.platform === 'win32' ? quoteShellArgForWindows(value) : value;
-}
-
 export async function runWithoutElectronRunAsNode<T>(action: () => Promise<T>): Promise<T> {
     const original = process.env.ELECTRON_RUN_AS_NODE;
     delete process.env.ELECTRON_RUN_AS_NODE;
@@ -28,17 +20,19 @@ async function main(): Promise<void> {
     const testCachePath = path.resolve(__dirname, '../../.vscode-test');
 
     // The folder containing the extension's package.json
-    const extensionDevelopmentPath = formatPathForVSCodeTestRunner(path.resolve(__dirname, '../../'));
+    const extensionRoot = process.env.CODEX_LOCAL_METER_TEST_EXTENSION_PATH
+        ?? path.resolve(__dirname, '../../');
+    const extensionDevelopmentPath = path.resolve(extensionRoot);
 
     // The path to the compiled test suite entry point
-    const extensionTestsPath = formatPathForVSCodeTestRunner(path.resolve(__dirname, './suite/index'));
+    const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
     await runWithoutElectronRunAsNode(() => runTests({
         extensionDevelopmentPath,
         extensionTestsPath,
         launchArgs: [
-            `--extensions-dir=${formatPathForVSCodeTestRunner(path.join(testCachePath, 'extensions'))}`,
-            `--user-data-dir=${formatPathForVSCodeTestRunner(path.join(testCachePath, 'user-data'))}`
+            `--extensions-dir=${path.join(testCachePath, 'extensions')}`,
+            `--user-data-dir=${path.join(testCachePath, 'user-data')}`
         ]
     }));
 }

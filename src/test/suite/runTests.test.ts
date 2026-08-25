@@ -1,21 +1,5 @@
 import * as assert from 'assert';
-import { quoteShellArgForWindows, runWithoutElectronRunAsNode } from '../runTests';
-
-suite('runTests - quoteShellArgForWindows()', () => {
-    test('wraps paths with spaces for the Windows shell', () => {
-        assert.strictEqual(
-            quoteShellArgForWindows('E:\\Data\\GithubProjects\\Codex Local Meter\\out\\test\\suite\\index'),
-            '"E:\\Data\\GithubProjects\\Codex Local Meter\\out\\test\\suite\\index"'
-        );
-    });
-
-    test('escapes embedded double quotes', () => {
-        assert.strictEqual(
-            quoteShellArgForWindows('E:\\Data\\GithubProjects\\Codex "Local" Meter'),
-            '"E:\\Data\\GithubProjects\\Codex \\"Local\\" Meter"'
-        );
-    });
-});
+import { runWithoutElectronRunAsNode } from '../runTests';
 
 suite('runTests - runWithoutElectronRunAsNode()', () => {
     test('clears ELECTRON_RUN_AS_NODE while launching VS Code and restores it after', async () => {
